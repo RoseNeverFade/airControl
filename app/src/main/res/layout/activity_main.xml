@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".MainActivity">
+
+
+
+
+    <RelativeLayout
+        android:id="@+id/main_body"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <Button
+            android:id="@+id/btn_test"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_marginLeft="60dp"
+            android:text="t" />
+
+
+        <Button
+            android:id="@+id/btn_record"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:text="r" />
+
+        <Button
+            android:id="@+id/btn_output"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_marginTop="60dp"
+            android:text="o" />
+        <Button
+            android:id="@+id/btn_pic1"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_marginTop="120dp"
+            android:text="a" />
+        <Button
+            android:id="@+id/btn_pic2"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_marginTop="180dp"
+            android:text="b" />
+        <Button
+            android:id="@+id/btn_data"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_marginTop="240dp"
+            android:text="c" />
+
+        <Button
+            android:id="@+id/btn_team"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:onClick="onClick"
+            android:layout_marginTop="60dp"
+            android:layout_marginLeft="650dp"
+            android:text="t" />
+
+        <Button
+            android:id="@+id/btn_waypoint"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:onClick="onClick"
+            android:layout_marginLeft="650dp"
+            android:layout_marginTop="120dp"
+            android:text="w" />
+
+        <Button
+            android:id="@+id/btn_hotpoint"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:onClick="onClick"
+            android:layout_marginTop="180dp"
+            android:layout_marginLeft="650dp"
+            android:text="h" />
+
+        <TextView
+            android:id="@+id/textTLng"
+            android:layout_width="90dp"
+            android:layout_height="30dp"
+            android:layout_marginLeft="110dp"
+            android:layout_marginTop="290dp"
+            android:text="经度"
+            android:textAlignment="center" />
+        <TextView
+            android:id="@+id/textTLat"
+            android:layout_width="90dp"
+            android:layout_height="30dp"
+            android:layout_marginLeft="290dp"
+            android:layout_marginTop="290dp"
+            android:text="纬度"
+            android:textAlignment="center" />
+        <TextView
+            android:id="@+id/textTAlt"
+            android:layout_width="90dp"
+            android:layout_height="30dp"
+            android:layout_marginLeft="470dp"
+            android:layout_marginTop="290dp"
+            android:text="高度"
+            android:textAlignment="center" />
+        <TextView
+            android:id="@+id/textTPitch"
+            android:layout_width="90dp"
+            android:layout_height="30dp"
+            android:layout_marginLeft="110dp"
+            android:layout_marginTop="320dp"
+            android:layout_marginBottom="20dp"
+            android:text="俯仰角"
+            android:textAlignment="center" />
+        <TextView
+            android:id="@+id/textTRoll"
+            android:layout_width="90dp"
+            android:layout_height="30dp"
+            android:layout_marginLeft="290dp"
+            android:layout_marginTop="320dp"
+            android:text="横滚角"
+            android:textAlignment="center" />
+
+        <TextView
+            android:id="@+id/textTYaw"
+            android:layout_width="90dp"
+            android:layout_height="30dp"
+            android:layout_marginLeft="470dp"
+            android:layout_marginTop="320dp"
+            android:text="偏航角"
+            android:textAlignment="center" />
+
+        <TextView
+            android:id="@+id/textLng"
+            android:layout_width="90dp"
+            android:layout_height="30dp"
+            android:layout_marginLeft="200dp"
+            android:layout_marginTop="290dp"
+            android:text="经度"
+            android:textAlignment="center" />
+        <TextView
+            android:id="@+id/textLat"
+            android:layout_width="90dp"
+            android:layout_height="30dp"
+            android:layout_marginLeft="380dp"
+            android:layout_marginTop="290dp"
+            android:text="纬度"
+            android:textAlignment="center" />
+        <TextView
+            android:id="@+id/textAlt"
+            android:layout_width="90dp"
+            android:layout_height="30dp"
+            android:layout_marginLeft="560dp"
+            android:layout_marginTop="290dp"
+            android:text="高度"
+            android:textAlignment="center" />
+        <TextView
+            android:id="@+id/textPitch"
+            android:layout_width="90dp"
+            android:layout_height="30dp"
+            android:layout_marginLeft="200dp"
+            android:layout_marginTop="320dp"
+            android:text="俯仰角"
+            android:textAlignment="center" />
+        <TextView
+            android:id="@+id/textRoll"
+            android:layout_width="90dp"
+            android:layout_height="30dp"
+            android:layout_marginLeft="380dp"
+            android:layout_marginTop="320dp"
+            android:text="横滚角"
+            android:textAlignment="center" />
+        <TextView
+            android:id="@+id/textYaw"
+            android:layout_width="90dp"
+            android:layout_height="30dp"
+            android:layout_marginLeft="560dp"
+            android:layout_marginTop="320dp"
+            android:text="偏航角"
+            android:textAlignment="center" />
+
+    </RelativeLayout>r
+
+</LinearLayout>
+
+
