@@ -1,7 +1,6 @@
 package com.demo.aircontrol;
 
-import androidx.appcompat.app.AppCompatActivity;
-
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -12,12 +11,14 @@ import android.widget.Button;
 import android.widget.PopupWindow;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.appcompat.app.AppCompatActivity;
 
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Calendar;
+
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
@@ -34,12 +35,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Button btnDemRecord;//记录经纬数据
     private Button btnDemOutput;//输出经纬数据至文件
 
+    private Button btnPic1; //Button A
+    private Button btnPic2; //Button A
+    private Button btnData; //Button A
+
     private PopupWindow popupWindowTeam;
     private PopupWindow popupWindowWay;
     private PopupWindow popupWindowHot;
     private PopupWindow popupWindowCon;
 
     private Calendar now = Calendar.getInstance();
+    private DroneData droneData;
 
 
     class TimeThread extends Thread {
@@ -80,7 +86,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+//
+        droneData.getInstance().setContext(this);
         initUI();
     }
 
@@ -103,6 +110,34 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         btnDemOutput = (Button) findViewById(R.id.btn_output);
         btnDemOutput.setOnClickListener(this);//输出经纬数据至文件
 
+        btnPic1 = (Button) findViewById(R.id.btn_pic1);
+        btnPic1.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(MainActivity.this, Charts1Activity.class);
+                startActivity(intent);
+            }
+        });
+
+
+        btnPic2 = (Button) findViewById(R.id.btn_pic2);
+        btnPic2.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(MainActivity.this, Charts2Activity.class);
+                startActivity(intent);
+            }
+        });
+
+        btnData = (Button) findViewById(R.id.btn_data);
+        btnData.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(MainActivity.this, Charts3Activity.class);
+                startActivity(intent);
+            }
+        });
+
 
         btteam = (Button) findViewById(R.id.btn_team);
         btwaypoint = (Button) findViewById(R.id.btn_waypoint);
@@ -113,6 +148,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         bthotpoint.setOnClickListener(this);
 
         new TimeThread().start(); //启动新的线程
+
 
     }
 
@@ -157,7 +193,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
 
             //----------------------------------------
-
         }
     }
 

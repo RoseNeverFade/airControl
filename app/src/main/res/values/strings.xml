@@ -1,3 +1,32 @@
 <resources>
     <string name="app_name">airControl</string>
+    <string name="title_activity_charts">ChartsActivity</string>
+    <string name="title_activity_acharts">AChartsActivity</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="nav_header_title">Android Studio</string>
+    <string name="nav_header_subtitle">android.studio@android.com</string>
+    <string name="nav_header_desc">Navigation header</string>
+    <string name="action_settings">Settings</string>
+
+    <string name="tab_text_1">经度</string>
+    <string name="tab_text_2">纬度</string>
+    <string name="tab_text_3">高度</string>
+    <string name="tab_text_4">轨迹图</string>
+    <string name="title_activity_charts1">Charts1Activity</string>
+
+    <string name="tab_text_5">姿态角</string>
+    <string name="title_activity_charts2">Charts2Activity</string>
+
+    <string name="tab_text_6">高度差</string>
+    <string name="tab_text_7">距离差</string>
+    <string name="tab_text_8">经度差</string>
+    <string name="tab_text_9">纬度差</string>
+    <string name="tab_text_10">偏航角差</string>
+    <string name="tab_text_11">俯仰角差</string>
+    <string name="tab_text_12">横滚角差</string>
+
+    <string name="title_activity_charts3">Charts3Activity</string>
+
+
 </resources>
