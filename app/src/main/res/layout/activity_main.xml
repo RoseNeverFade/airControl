@@ -10,25 +10,33 @@
 
 
     <RelativeLayout
-        android:id="@+id/main_body"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
+            android:id="@+id/main_body"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
 
         <Button
-            android:id="@+id/btn_record"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:text="r" />
+                android:id="@+id/btn_record"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:text="r"/>
 
         <Button
-            android:id="@+id/btn_output"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:layout_marginTop="60dp"
-            android:text="o" />
+                android:id="@+id/btn_load"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:layout_marginLeft="60dp"
+                android:text="L"/>
+
+
         <Button
-            android:id="@+id/btn_pic1"
-            android:layout_width="50dp"
+                android:id="@+id/btn_output"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:layout_marginTop="60dp"
+                android:text="o"/>
+        <Button
+                android:id="@+id/btn_pic1"
+                android:layout_width="50dp"
             android:layout_height="50dp"
             android:layout_marginTop="120dp"
             android:text="a" />
@@ -220,6 +228,7 @@
                 android:layout_width="500dp"
                 android:layout_height="80dp"
                 android:layout_marginLeft="70dp"/>
+
 
     </RelativeLayout>r
 

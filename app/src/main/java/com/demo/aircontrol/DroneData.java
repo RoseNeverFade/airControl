@@ -3,8 +3,8 @@ package com.demo.aircontrol;
 import android.content.Context;
 
 import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -39,6 +39,8 @@ public class DroneData {
 
     private Context context;
 
+    SimpleDateFormat df = new SimpleDateFormat("yyyy/MM/dd-HH:mm:ss:SSS");//设置日期格式
+
     //单例模式，保证全局只有一个DroneData
     private DroneData() {
         initData();
@@ -50,7 +52,6 @@ public class DroneData {
 
     public void setContext(Context context) {
         this.context = context;
-        loadGPSData();
     }
 
     private void initData() {
@@ -74,19 +75,20 @@ public class DroneData {
         format = new SimpleDateFormat("yyyy_MM_dd-hh:mm:ss");
     }
 
-    private void loadGPSData() {
+    public void loadGPSData(String dir) {
         initData();
         try {
-            BufferedReader in = new BufferedReader(new InputStreamReader(context.getResources().openRawResource(R.raw.testdata)));
+            FileReader fileReader = new FileReader(dir);
+            BufferedReader in = new BufferedReader(fileReader);
             String str = "";
             if ((str = in.readLine()) == null) {
                 //TODO: 异常处理
                 return;
             }
-            int lines = Integer.parseInt(str);
-            if (lines == lineNum) {
-                return;
-            }
+//            int lines = Integer.parseInt(str);
+//            if (lines == lineNum) {
+//                return;
+//            }
             in.readLine();
             while ((str = in.readLine()) != null) {
                 clipGPSData(str);
@@ -116,11 +118,12 @@ public class DroneData {
     private void clipGPSData(String str) {
         String[] arr = str.split("\\s+", 7);
         if (arr.length != 7) {
-            throw new RuntimeException("Data Error!Please check 'gps_log'file!");
+            //throw new RuntimeException("Data Error!Please check 'gps_log'file!");
+            return;
         }
         Date date = null;
         try {
-            date = format.parse(arr[0]);
+            date = df.parse(arr[0]);
         } catch (ParseException e) {
             e.printStackTrace();
         }
@@ -133,9 +136,9 @@ public class DroneData {
         gpsRoll.add(Double.parseDouble(arr[6]));
     }
 
-    public void refreshGPSData() {
-        loadGPSData();
-    }
+//    public void refreshGPSData() {
+//        loadGPSData();
+//    }
 
     public void setDir(String dataDir) {
         this.dataDir = dataDir;

@@ -2,9 +2,11 @@ package com.demo.aircontrol;
 
 import android.content.Intent;
 import android.graphics.drawable.BitmapDrawable;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
@@ -38,6 +40,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Button btnDemRecord;//记录经纬数据
     private Button btnDemOutput;//输出经纬数据至文件
 
+    private static final int FILE_SELECT_CODE = 0;
     private Button btnPic1; //Button A
     private Button btnPic2; //Button A
     private Button btnData; //Button A
@@ -228,92 +231,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
     }
 
+    private Button btnLoad; //Button A
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
 
-        droneData.getInstance().setContext(this);
+        droneData = droneData.getInstance();
+        droneData.setContext(this);
         initUI();
     }
 
-    private void initUI() {
-
-        //显示信息
-        tLng = (TextView) findViewById(R.id.textLng);
-        tLat = (TextView) findViewById(R.id.textLat);
-        tAlt = (TextView) findViewById(R.id.textAlt);
-        tPitch = (TextView) findViewById(R.id.textPitch);
-        tRoll = (TextView) findViewById(R.id.textRoll);
-        tYaw = (TextView) findViewById(R.id.textYaw);
-
-        // ---------------设置单击事件-------------------------
-        //  private Button btnDemRecord;//记录经纬数据
-        // private Button btnDemOutput;//输出经纬数据至文件
-        btnDemRecord = (Button) findViewById(R.id.btn_record);
-        btnDemRecord.setOnClickListener(this);//记录经纬数据
-
-        btnDemOutput = (Button) findViewById(R.id.btn_output);
-        btnDemOutput.setOnClickListener(this);//输出经纬数据至文件
-
-
-        btnPic1 = (Button) findViewById(R.id.btn_pic1);
-        btnPic1.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(MainActivity.this, Charts1Activity.class);
-                startActivity(intent);
-            }
-        });
-
-
-        btnPic2 = (Button) findViewById(R.id.btn_pic2);
-        btnPic2.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(MainActivity.this, Charts2Activity.class);
-                startActivity(intent);
-            }
-        });
-
-        btnData = (Button) findViewById(R.id.btn_data);
-        btnData.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(MainActivity.this, Charts3Activity.class);
-                startActivity(intent);
-            }
-        });
-
-
-        btteam = (Button) findViewById(R.id.btn_team);
-        btwaypoint = (Button) findViewById(R.id.btn_waypoint);
-        bthotpoint = (Button) findViewById(R.id.btn_hotpoint);
-        btcserver = (Button) findViewById(R.id.btn_cserver);
-
-        btteam.setOnClickListener(this);
-        btwaypoint.setOnClickListener(this);
-        bthotpoint.setOnClickListener(this);
-        btcserver.setOnClickListener(this);
-
-//        new TimeThread().start(); //启动新的线程
-
-        missioninfo = (TextView) findViewById(R.id.missininfo);
-        btstop = (Button) findViewById(R.id.btn_stop);
-
-        teamnum = 0;
-        teamleader = 0;
-
-        timelist = new ArrayList<>();
-        lnglist = new ArrayList<>();
-        latlist = new ArrayList<>();
-        altlist = new ArrayList<>();
-        yawlist = new ArrayList<>();
-        pitchlist = new ArrayList<>();
-        rolllist = new ArrayList<>();
-
-    }
 
     @Override
     public void onClick(View v) {
@@ -378,6 +308,129 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
         }
     }
+
+    private void initUI() {
+
+        //显示信息
+        tLng = (TextView) findViewById(R.id.textLng);
+        tLat = (TextView) findViewById(R.id.textLat);
+        tAlt = (TextView) findViewById(R.id.textAlt);
+        tPitch = (TextView) findViewById(R.id.textPitch);
+        tRoll = (TextView) findViewById(R.id.textRoll);
+        tYaw = (TextView) findViewById(R.id.textYaw);
+
+        // ---------------设置单击事件-------------------------
+        //  private Button btnDemRecord;//记录经纬数据
+        // private Button btnDemOutput;//输出经纬数据至文件
+        btnDemRecord = (Button) findViewById(R.id.btn_record);
+        btnDemRecord.setOnClickListener(this);//记录经纬数据
+
+        btnDemOutput = (Button) findViewById(R.id.btn_output);
+        btnDemOutput.setOnClickListener(this);//输出经纬数据至文件
+
+
+        btnLoad = (Button) findViewById(R.id.btn_load);
+        btnLoad.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                showFileChooser();
+            }
+        });
+
+        btnPic1 = (Button) findViewById(R.id.btn_pic1);
+        btnPic1.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(MainActivity.this, Charts1Activity.class);
+                startActivity(intent);
+            }
+        });
+
+
+        btnPic2 = (Button) findViewById(R.id.btn_pic2);
+        btnPic2.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(MainActivity.this, Charts2Activity.class);
+                startActivity(intent);
+            }
+        });
+
+        btnData = (Button) findViewById(R.id.btn_data);
+        btnData.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent(MainActivity.this, Charts3Activity.class);
+                startActivity(intent);
+            }
+        });
+
+
+        btteam = (Button) findViewById(R.id.btn_team);
+        btwaypoint = (Button) findViewById(R.id.btn_waypoint);
+        bthotpoint = (Button) findViewById(R.id.btn_hotpoint);
+        btcserver = (Button) findViewById(R.id.btn_cserver);
+
+        btteam.setOnClickListener(this);
+        btwaypoint.setOnClickListener(this);
+        bthotpoint.setOnClickListener(this);
+        btcserver.setOnClickListener(this);
+
+//        new TimeThread().start(); //启动新的线程
+
+        missioninfo = (TextView) findViewById(R.id.missininfo);
+        btstop = (Button) findViewById(R.id.btn_stop);
+
+        teamnum = 0;
+        teamleader = 0;
+
+        timelist = new ArrayList<>();
+        lnglist = new ArrayList<>();
+        latlist = new ArrayList<>();
+        altlist = new ArrayList<>();
+        yawlist = new ArrayList<>();
+        pitchlist = new ArrayList<>();
+        rolllist = new ArrayList<>();
+
+    }
+
+    private void showFileChooser() {
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType("*/*");
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+
+        try {
+            startActivityForResult(
+                    Intent.createChooser(intent, "Select a File to Upload"),
+                    FILE_SELECT_CODE);
+        } catch (android.content.ActivityNotFoundException ex) {
+            // Potentially direct the user to the Market with a Dialog
+            Toast.makeText(this, "Please install a File Manager.",
+                    Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        switch (requestCode) {
+            case FILE_SELECT_CODE:
+                if (resultCode == RESULT_OK) {
+                    // Get the Uri of the selected file
+                    Uri uri = data.getData();
+                    Log.d("TAG", "File Uri: " + uri.toString());
+                    // Get the path
+                    String path = FileUtils.getPath(this, uri);
+                    Log.d("TAG", "File Path: " + path);
+                    // Get the file instance
+                    // File file = new File(path);
+                    // Initiate the upload
+                    droneData.loadGPSData(path);
+                }
+                break;
+        }
+        super.onActivityResult(requestCode, resultCode, data);
+    }
+
 
     private void outputGPStoFile(String FileName)
     {
