@@ -1,26 +1,28 @@
 package com.demo.aircontrol;
 
 import android.content.Intent;
+import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Message;
-import android.text.format.DateFormat;
+import android.os.HandlerThread;
 import android.view.Gravity;
 import android.view.View;
-import android.widget.Button;
-import android.widget.PopupWindow;
-import android.widget.TextView;
-import android.widget.Toast;
+import android.view.WindowManager;
+import android.widget.*;
 import androidx.appcompat.app.AppCompatActivity;
 
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 
+import static java.lang.Thread.sleep;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener, ClientConnector.ConnectLinstener {
 
     //显示信息
     private TextView tLng;
@@ -32,6 +34,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Button btwaypoint;
     private Button bthotpoint;
     private Button btteam;
+    private Button btcserver;
     private Button btnDemRecord;//记录经纬数据
     private Button btnDemOutput;//输出经纬数据至文件
 
@@ -39,54 +42,198 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Button btnPic2; //Button A
     private Button btnData; //Button A
 
+    private TextView missioninfo;
+    private Button btstop;
+
     private PopupWindow popupWindowTeam;
     private PopupWindow popupWindowWay;
     private PopupWindow popupWindowHot;
     private PopupWindow popupWindowCon;
+    private PopupWindow popupWindowCserver;
+    private PopupWindow popupWindowResult;
+    private PopupWindow popupWindowJointeam;
+    private PopupWindow popupWindowRotate;
+    private PopupWindow popupWindowAutorotate;
 
     private Calendar now = Calendar.getInstance();
+
     private DroneData droneData;
 
+    private int teamnum;
+    private int teamleader;
 
-    class TimeThread extends Thread {
-        @Override
-        public void run() {
-            do {
-                try {
-                    Thread.sleep(1000);
-                    Message msg = new Message();
-                    msg.what = 1;  //消息(一个整型值)
-                    mHandler.sendMessage(msg);// 每隔1秒发送一个msg给mHandler
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            } while (true);
-        }
-    }
+    private double waylng;
+    private double waylat;
+    private double wayalt;
+    private double wayvel;
+    private double hotlng;
+    private double hotlat;
+    private double hotalt;
+    private double hotw;
+    private double hotr;
+    private String hotstart;
+    private double autorotatew;
+    private String serverhost;
+    private int serverport;
+
+    private HandlerThread serverHandlerThread;
+    private Handler serverHandler;
+    private ClientConnector serverConnector;
+
+    private ArrayList<String> timelist;
+    private ArrayList<String> lnglist;
+    private ArrayList<String> latlist;
+    private ArrayList<String> altlist;
+    private ArrayList<String> rolllist;
+    private ArrayList<String> pitchlist;
+    private ArrayList<String> yawlist;
+
+//    class TimeThread extends Thread {
+//        @Override
+//        public void run() {
+//            do {
+//                try {
+//                    Thread.sleep(1000);
+//                    Message msg = new Message();
+//                    msg.what = 1;  //消息(一个整型值)
+//                    mHandler.sendMessage(msg);// 每隔1秒发送一个msg给mHandler
+//                } catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+//            } while (true);
+//        }
+//    }
 
     //在主线程里面处理消息并更新UI界面
-    private Handler mHandler = new Handler(){
-        @Override
-        public void handleMessage(Message msg) {
-            super.handleMessage(msg);
-            switch (msg.what) {
-                case 1:
-                    long sysTime = System.currentTimeMillis();//获取系统时间
-                    CharSequence sysTimeStr = DateFormat.format("hh:mm:ss", sysTime);//时间显示格式
-                    tLng.setText(sysTimeStr); //更新时间
-                    break;
-                default:
-                    break;
+//    private Handler mHandler = new Handler(){
+//        @Override
+//        public void handleMessage(Message msg) {
+//            super.handleMessage(msg);
+//            switch (msg.what) {
+//                case 1:
+//                    long sysTime = System.currentTimeMillis();//获取系统时间
+//                    CharSequence sysTimeStr = DateFormat.format("hh:mm:ss", sysTime);//时间显示格式
+//                    tLng.setText(sysTimeStr); //更新时间
+//                    break;
+//                default:
+//                    break;
+//
+//            }
+//        }
+//    };
 
+
+//    private String sendToServer(String msg){
+//        try {
+//            Socket socket = new Socket();
+//            socket.connect(new InetSocketAddress("192.168.0.108",9053));
+//
+//            //获取输出流，向服务器端发送信息
+//            OutputStream os=socket.getOutputStream();//字节输出流
+//            PrintWriter pw=new PrintWriter(os);//将输出流包装为打印流
+//            pw.write(msg);
+//            pw.flush();
+//            socket.shutdownOutput();//关闭输出流
+//
+//            InputStream is=socket.getInputStream();
+//            BufferedReader in = new BufferedReader(new InputStreamReader(is));
+//            String info=null;
+//            while((info=in.readLine())!=null){
+//                System.out.println(info);
+//            }
+//            is.close();
+//            in.close();
+//            socket.close();
+//            return info;
+//        } catch (UnknownHostException e) {
+//            e.printStackTrace();
+//            return "error";
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//            return "error";
+//        }
+//    }
+
+    @Override
+    public void onReceiveData(final String data) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("*****************************:" + data);
+                String str = "";
+                if (data.contains("updatedata")) {
+                    String[] updatedata = data.split(",");
+                    tLng.setText(updatedata[1]);
+                    lnglist.add(updatedata[1]);
+                    tLat.setText(updatedata[2]);
+                    latlist.add(updatedata[2]);
+                    tAlt.setText(updatedata[3]);
+                    altlist.add(updatedata[3]);
+                    tYaw.setText(updatedata[4]);
+                    yawlist.add(updatedata[4]);
+                    tPitch.setText(updatedata[5]);
+                    pitchlist.add(updatedata[5]);
+                    tRoll.setText(updatedata[6]);
+                    rolllist.add(updatedata[6]);
+                    SimpleDateFormat df = new SimpleDateFormat("yyyy/MM/dd-HH:mm:ss:SSS");//设置日期格式
+                    timelist.add(df.format(new Date()));
+                } else if (data.contains("connectsuccess")) {
+                    initPopupWindowResult("连接成功");
+                    popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                } else if (data.contains("connecterror")) {
+                    initPopupWindowResult("连接失败");
+                    popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                } else if (data.contains("createsuccess")) {
+                    teamnum = Integer.parseInt(data.split(",")[1]);
+                    teamleader = 1;
+                    initPopupWindowResult("创建成功！\n编队号：" + teamnum);
+                    popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                } else if (data.contains("joinsuccess")) {
+                    teamnum = Integer.parseInt(data.split(",")[1]);
+                    initPopupWindowResult("加入编队成功");
+                    popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                } else if (data.contains("teamnotfound")) {
+                    initPopupWindowResult("加入编队失败");
+                    popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                } else if (data.contains("stopsuccess")) {
+                    missioninfo.setText("");
+                    btstop.setVisibility(View.GONE);
+                } else if (data.contains("finish")) {
+                    missioninfo.setText("");
+                    btstop.setVisibility(View.GONE);
+                    initPopupWindowResult("执行完毕");
+                    popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                } else if (data.contains("waysavesuccess") || data.contains("wayexecutsuccess")) {
+                    if (data.contains("savesuccess")) str = "已保存航点飞行任务，等待编队执行命令。\n";
+                    else if (data.contains("executsuccess")) str = "开始执行航点飞行任务！\n";
+                    missioninfo.setText(str + "经度：" + waylng + " 纬度：" + waylat + " 高度：" + wayalt + " 速度：" + wayvel);
+                    btstop.setVisibility(View.VISIBLE);
+                } else if (data.contains("hotsavesuccess") || data.contains("hotexecutsuccess")) {
+                    if (data.contains("savesuccess")) str = "已保存圆周飞行任务，等待编队执行命令。\n";
+                    else if (data.contains("executsuccess")) str = "开始执行圆周飞行任务！\n";
+                    missioninfo.setText(str + "圆心经度：" + hotlng + " 圆心纬度：" + hotlat + " 圆心高度：" + hotalt + " 绕飞半径：" + hotr + " 角速度：" + hotw + " 起始方向：" + hotstart);
+                    btstop.setVisibility(View.VISIBLE);
+                } else if (data.contains("rotateexecutsuccess")) {
+                    str = "开始执行无人机转向任务！\n机头转向：" + data.split(",")[1];
+                    missioninfo.setText(str);
+                    btstop.setVisibility(View.VISIBLE);
+                    popupWindowRotate.dismiss();
+                } else if (data.contains("arexecutsuccess") || data.contains("arsavesuccess")) {
+                    if (data.contains("savesuccess")) str = "已保存原地旋转任务，等待编队执行命令。\n";
+                    else if (data.contains("executsuccess")) str = "开始执行原地旋转任务！\n";
+                    missioninfo.setText(str + "旋转速度：" + autorotatew);
+                    btstop.setVisibility(View.VISIBLE);
+                }
             }
-        }
-    };
+        });
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-//
+
+
         droneData.getInstance().setContext(this);
         initUI();
     }
@@ -109,6 +256,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         btnDemOutput = (Button) findViewById(R.id.btn_output);
         btnDemOutput.setOnClickListener(this);//输出经纬数据至文件
+
 
         btnPic1 = (Button) findViewById(R.id.btn_pic1);
         btnPic1.setOnClickListener(new View.OnClickListener() {
@@ -142,13 +290,28 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         btteam = (Button) findViewById(R.id.btn_team);
         btwaypoint = (Button) findViewById(R.id.btn_waypoint);
         bthotpoint = (Button) findViewById(R.id.btn_hotpoint);
+        btcserver = (Button) findViewById(R.id.btn_cserver);
 
         btteam.setOnClickListener(this);
         btwaypoint.setOnClickListener(this);
         bthotpoint.setOnClickListener(this);
+        btcserver.setOnClickListener(this);
 
-        new TimeThread().start(); //启动新的线程
+//        new TimeThread().start(); //启动新的线程
 
+        missioninfo = (TextView) findViewById(R.id.missininfo);
+        btstop = (Button) findViewById(R.id.btn_stop);
+
+        teamnum = 0;
+        teamleader = 0;
+
+        timelist = new ArrayList<>();
+        lnglist = new ArrayList<>();
+        latlist = new ArrayList<>();
+        altlist = new ArrayList<>();
+        yawlist = new ArrayList<>();
+        pitchlist = new ArrayList<>();
+        rolllist = new ArrayList<>();
 
     }
 
@@ -157,15 +320,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         switch (v.getId()) {
             //-----------------------------------------
             case R.id.btn_record://保存
-
-
+                timelist = new ArrayList<>();
+                lnglist = new ArrayList<>();
+                latlist = new ArrayList<>();
+                altlist = new ArrayList<>();
+                yawlist = new ArrayList<>();
+                pitchlist = new ArrayList<>();
+                rolllist = new ArrayList<>();
                 break;
 
             case R.id.btn_output://输出到文件
 
                 //loginAccount();
 
-                String fileName ="a.txt";//文件名规则？
+                String fileName = "a.txt";//文件名规则？
                 outputGPStoFile(fileName);
                 break;
 
@@ -188,11 +356,26 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                 break;
 
-            case R.id.btn_test:
-
+            case R.id.btn_cserver:
+                initPopupWindowCserver();
+                popupWindowCserver.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
                 break;
 
-            //----------------------------------------
+
+            case R.id.btn_rotate:
+                initPopupWindowRotate();
+                popupWindowRotate.showAtLocation(findViewById(R.id.main_body), Gravity.RIGHT, 0, 0);
+                break;
+
+            case R.id.btn_autorotate:
+                initPopupWindowAutorotate();
+                popupWindowAutorotate.showAtLocation(findViewById(R.id.main_body), Gravity.RIGHT, 0, 0);
+                break;
+
+            case R.id.btn_stop:
+                initPopupWindowConfirm(1);
+                popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                break;
         }
     }
 
@@ -224,8 +407,21 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 bw.write("Time    Lng    Lat    Alt    Yaw    Pitch    Roll");
                 bw.newLine();
                 //遍历集合
-                int len = 0;
+                int len = timelist.size();
                 for (int i=0; i<len; i++) {
+                    bw.write("" + timelist.get(i));
+                    bw.write("    ");
+                    bw.write("" + lnglist.get(i));
+                    bw.write("    ");
+                    bw.write("" + latlist.get(i));
+                    bw.write("    ");
+                    bw.write("" + altlist.get(i));
+                    bw.write("    ");
+                    bw.write("" + yawlist.get(i));
+                    bw.write("    ");
+                    bw.write("" + pitchlist.get(i));
+                    bw.write("    ");
+                    bw.write("" + rolllist.get(i));
                     bw.newLine();
                     bw.flush();
                 }
@@ -252,42 +448,275 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 bw.write("Time    Lng    Lat    Alt    Yaw    Pitch    Roll");
                 bw.newLine();
                 //遍历集合
-                int len = 0;
+                int len = timelist.size();
                 for (int i=0; i<len; i++) {
+                    bw.write("" + timelist.get(i));
+                    bw.write("    ");
+                    bw.write("" + lnglist.get(i));
+                    bw.write("    ");
+                    bw.write("" + latlist.get(i));
+                    bw.write("    ");
+                    bw.write("" + altlist.get(i));
+                    bw.write("    ");
+                    bw.write("" + yawlist.get(i));
+                    bw.write("    ");
+                    bw.write("" + pitchlist.get(i));
+                    bw.write("    ");
+                    bw.write("" + rolllist.get(i));
                     bw.newLine();
                     bw.flush();
                 }
                 // //释放资源
                 bw.close();
                 fileWriter.close();
-            }catch (IOException e) {
+            } catch (IOException e) {
                 e.printStackTrace();
-                Toast.makeText(this,"file is not exist",Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "file is not exist", Toast.LENGTH_SHORT).show();
             }
         }
     }
 
-    protected  void initPopupWindowConfirm()
-    {
-        View v = getLayoutInflater().inflate(R.layout.pop_confirm, null, false);
-        popupWindowCon = new PopupWindow(v, 300, 300, true);
-        popupWindowCon.setFocusable(true);
+    protected void initPopupWindowResult(String str) {
+        View v = getLayoutInflater().inflate(R.layout.pop_result, null, false);
+        popupWindowResult = new PopupWindow(v, 600, 300, true);
+        popupWindowResult.setFocusable(true);
+
+        popupWindowResult.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
+        popupWindowResult.setBackgroundDrawable(new BitmapDrawable());
+
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.alpha = 0.5f;//设置阴影透明度
+        getWindow().setAttributes(lp);
+        popupWindowResult.setOnDismissListener(new PopupWindow.OnDismissListener() {
+
+            @Override
+            public void onDismiss() {
+                WindowManager.LayoutParams lp = getWindow().getAttributes();
+                lp.alpha = 1f;
+                getWindow().setAttributes(lp);
+            }
+        });
+
+        TextView sometext = (TextView) v.findViewById(R.id.sometext);
+        sometext.setText(str);
+
+    }
+
+    public void connectServer(String serverhost, int serverport) {
+        serverHandlerThread = new HandlerThread("MainActivity", android.os.Process.THREAD_PRIORITY_BACKGROUND);
+        serverHandlerThread.start();
+        serverHandler = new Handler(serverHandlerThread.getLooper());
+        serverConnector = new ClientConnector(serverhost, serverport);
+        serverConnector.setOnConnectLinstener(this);
+        serverHandler.post(new ConnectRunnable());
+    }
+
+    protected void initPopupWindowCserver() {
+        View v = getLayoutInflater().inflate(R.layout.pop_connectserver, null, false);
+        popupWindowCserver = new PopupWindow(v, 1000, 500, true);
+        popupWindowCserver.setFocusable(true);
+
+        popupWindowCserver.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
+        popupWindowCserver.setBackgroundDrawable(new BitmapDrawable());
+
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.alpha = 0.5f;//设置阴影透明度
+        getWindow().setAttributes(lp);
+        popupWindowCserver.setOnDismissListener(new PopupWindow.OnDismissListener() {
+
+            @Override
+            public void onDismiss() {
+                WindowManager.LayoutParams lp = getWindow().getAttributes();
+                lp.alpha = 1f;
+                getWindow().setAttributes(lp);
+            }
+        });
 
         /* pop.xml视图里面的控件 */
-        Button	btyes	= (Button) v.findViewById( R.id.bt_yes );
-        Button	btno	= (Button) v.findViewById( R.id.bt_no);
+        Button btyes = (Button) v.findViewById(R.id.bt_yes);
+        Button btno = (Button) v.findViewById(R.id.bt_no);
+        final TextView txtaddr = (TextView) v.findViewById(R.id.etip);
 
 
-        btyes.setOnClickListener( new View.OnClickListener()
-        {
+        btyes.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick( View v )
-            {
-                /*
-                 * TODO Auto-generated method stub
-                 * 这里可以执行相关操作
-                 */
-                System.out.println( "打开操作" );
+            public void onClick(View v) {
+                popupWindowCserver.dismiss();
+                String addr = txtaddr.getText().toString();
+                if (addr.contains(":")) {
+                    try {
+                        serverhost = addr.split(":")[0];
+                        serverport = Integer.parseInt(addr.split(":")[1]);
+                        connectServer(serverhost, serverport);
+                        sleep(1000);
+                    } catch (Exception e) {
+                        initPopupWindowResult("连接失败");
+                        popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                    }
+                } else {
+                    initPopupWindowResult("连接失败");
+                    popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                }
+            }
+        });
+
+        btno.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                popupWindowCserver.dismiss();
+            }
+        });
+    }
+
+    protected void initPopupWindowJointeam() {
+        View v = getLayoutInflater().inflate(R.layout.pop_jointeam, null, false);
+        popupWindowJointeam = new PopupWindow(v, 1000, 500, true);
+        popupWindowJointeam.setFocusable(true);
+
+        popupWindowJointeam.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
+        popupWindowJointeam.setBackgroundDrawable(new BitmapDrawable());
+
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.alpha = 0.5f;//设置阴影透明度
+        getWindow().setAttributes(lp);
+        popupWindowJointeam.setOnDismissListener(new PopupWindow.OnDismissListener() {
+
+            @Override
+            public void onDismiss() {
+                WindowManager.LayoutParams lp = getWindow().getAttributes();
+                lp.alpha = 1f;
+                getWindow().setAttributes(lp);
+            }
+        });
+
+        /* pop.xml视图里面的控件 */
+        Button btyes = (Button) v.findViewById(R.id.bt_yes);
+        Button btno = (Button) v.findViewById(R.id.bt_no);
+        final TextView etnum = (TextView) v.findViewById(R.id.etnum);
+
+        btyes.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                popupWindowJointeam.dismiss();
+
+                try {
+                    serverConnector.send("jointeam," + etnum.getText().toString());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    initPopupWindowResult("加入编队失败");
+                    popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                }
+
+            }
+        });
+
+        btno.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                popupWindowJointeam.dismiss();
+            }
+        });
+    }
+
+    protected void initPopupWindowConfirm(final int type) {
+        View v = getLayoutInflater().inflate(R.layout.pop_confirm, null, false);
+        popupWindowCon = new PopupWindow(v, 1000, 500, true);
+        popupWindowCon.setFocusable(true);
+
+        popupWindowCon.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
+        popupWindowCon.setBackgroundDrawable(new BitmapDrawable());
+
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.alpha = 0.5f;//设置阴影透明度
+        getWindow().setAttributes(lp);
+        popupWindowCon.setOnDismissListener(new PopupWindow.OnDismissListener() {
+
+            @Override
+            public void onDismiss() {
+                WindowManager.LayoutParams lp = getWindow().getAttributes();
+                lp.alpha = 1f;
+                getWindow().setAttributes(lp);
+            }
+        });
+
+        /* pop.xml视图里面的控件 */
+        Button btyes = (Button) v.findViewById(R.id.bt_yes);
+        Button btno = (Button) v.findViewById(R.id.bt_no);
+        TextView txtcontitle = (TextView) v.findViewById(R.id.txt_contitle);
+
+        if (type == 21 || type == 31 || type == 51) txtcontitle.setText("保存配置并等待编队命令");
+        else if (type == 1) {
+            txtcontitle.setText("中止执行任务");
+        }
+
+
+        btyes.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String str;
+                String res;
+
+                if (type == 1) {
+                    try {
+                        serverConnector.send("stop");
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        initPopupWindowResult("失败");
+                        popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                    }
+                } else if (type / 10 == 2) {
+                    String choose = "";
+                    if (type == 21) choose = "all";
+                    else if (type == 22) choose = "alone";
+                    try {
+                        serverConnector.send("way," + choose + "," + teamnum + "," + waylng + "," + waylat + "," + wayalt + "," + wayvel);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        initPopupWindowResult("失败");
+                        popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                    }
+                    popupWindowWay.dismiss();
+                } else if (type / 10 == 3) {
+                    popupWindowHot.dismiss();
+                    String choose = "";
+                    if (type == 31) choose = "all";
+                    else if (type == 32) choose = "alone";
+                    try {
+                        serverConnector.send("hot," + choose + "," + teamnum + "," + hotlng + "," + hotlat + "," + hotalt + "," + hotr + "," + hotw + "," + hotstart);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        initPopupWindowResult("失败");
+                        popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                    }
+                } else if (type / 10 == 4) {
+                    popupWindowRotate.dismiss();
+                    str = "";
+                    if (type == 41) str += "east";
+                    else if (type == 42) str += "south";
+                    else if (type == 43) str += "west";
+                    else if (type == 44) str += "north";
+                    try {
+                        serverConnector.send("rotate," + str);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        initPopupWindowResult("失败");
+                        popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                    }
+
+                } else if (type / 10 == 5) {
+                    String choose = "";
+                    if (type == 51) choose = "all";
+                    else if (type == 52) choose = "alone";
+                    try {
+                        serverConnector.send("ar," + choose + "," + teamnum + "," + autorotatew);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        initPopupWindowResult("失败");
+                        popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                    }
+                    popupWindowAutorotate.dismiss();
+                }
+                popupWindowCon.dismiss();
             }
         } );
 
@@ -296,93 +725,135 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             @Override
             public void onClick( View v )
             {
-                /*
-                 * TODO Auto-generated method stub
-                 * 这里可以执行相关操作
-                 */
-                System.out.println( "保存操作" );
+                popupWindowCon.dismiss();
             }
         } );
     }
 
-    protected void initPopupWindowTeam()
-    {
+    protected void initPopupWindowTeam() {
         /* TODO Auto-generated method stub */
 
         /* 获取自定义布局文件pop.xml的视图 */
-        View popupWindow_view = getLayoutInflater().inflate( R.layout.pop_team, null,
-                false );
+        View popupWindow_view = getLayoutInflater().inflate(R.layout.pop_team, null,
+                false);
         /* 创建PopupWindow实例,200,150分别是宽度和高度 */
-        popupWindowTeam = new PopupWindow( popupWindow_view, 600, 600, true );
+        popupWindowTeam = new PopupWindow(popupWindow_view, 600, 600, true);
 
+        popupWindowTeam.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
+        popupWindowTeam.setBackgroundDrawable(new BitmapDrawable());
 
-        /* 设置动画效果 */
-        popupWindowTeam.setAnimationStyle( R.style.AnimationFade );
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.alpha = 0.5f;//设置阴影透明度
+        getWindow().setAttributes(lp);
+        popupWindowTeam.setOnDismissListener(new PopupWindow.OnDismissListener() {
+
+            @Override
+            public void onDismiss() {
+                WindowManager.LayoutParams lp = getWindow().getAttributes();
+                lp.alpha = 1f;
+                getWindow().setAttributes(lp);
+            }
+        });
 
         /* pop.xml视图里面的控件 */
-        Button	btcteam	= (Button) popupWindow_view.findViewById( R.id.create_team );
-        Button	btjteam	= (Button) popupWindow_view.findViewById( R.id.join_team);
-        TextView txtteamstate	= (TextView) popupWindow_view.findViewById( R.id.team_state);
+        Button btcteam = (Button) popupWindow_view.findViewById(R.id.create_team);
+        Button btjteam = (Button) popupWindow_view.findViewById(R.id.join_team);
+        Button btqteam = (Button) popupWindow_view.findViewById(R.id.quit_team);
+        TextView txtteamstate = (TextView) popupWindow_view.findViewById(R.id.team_state);
 
+        if (teamnum != 0) {
+            txtteamstate.setText("编队号：" + teamnum);
+            btcteam.setEnabled(false);
+            btjteam.setEnabled(false);
+        } else {
+            btqteam.setEnabled(false);
+        }
 
-        btcteam.setOnClickListener( new View.OnClickListener()
-        {
+        btcteam.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick( View v )
-            {
-                /*
-                 * TODO Auto-generated method stub
-                 * 这里可以执行相关操作
-                 */
-                System.out.println( "打开操作" );
-            }
-        } );
+            public void onClick(View v) {
+                try {
+                    serverConnector.send("createteam," + System.currentTimeMillis() % 1000);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                popupWindowTeam.dismiss();
 
-        btjteam.setOnClickListener( new View.OnClickListener()
-        {
-            @Override
-            public void onClick( View v )
-            {
-                /*
-                 * TODO Auto-generated method stub
-                 * 这里可以执行相关操作
-                 */
-                System.out.println( "保存操作" );
             }
-        } );
+        });
+
+        btjteam.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                popupWindowTeam.dismiss();
+                initPopupWindowJointeam();
+                popupWindowJointeam.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+            }
+        });
+
+        btqteam.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                teamleader = 0;
+                teamnum = 0;
+                popupWindowTeam.dismiss();
+            }
+        });
 
     }
 
-    protected void initPopupWindowWay()
-    {
-        /* TODO Auto-generated method stub */
-
-        /* 获取自定义布局文件pop.xml的视图 */
-        View popupWindow_view = getLayoutInflater().inflate( R.layout.pop_way, null,
-                false );
+    protected void initPopupWindowWay() {
+        View popupWindow_view = getLayoutInflater().inflate(R.layout.pop_way, null,
+                false);
         /* 创建PopupWindow实例,200,150分别是宽度和高度 */
-        popupWindowWay = new PopupWindow( popupWindow_view, 1000, 1200, true );
+        popupWindowWay = new PopupWindow(popupWindow_view, 1000, 1200, true);
 
+        popupWindowWay.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
+        popupWindowWay.setBackgroundDrawable(new BitmapDrawable());
 
-        /* 设置动画效果 */
-        popupWindowWay.setAnimationStyle( R.style.AnimationFade );
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.alpha = 0.5f;//设置阴影透明度
+        getWindow().setAttributes(lp);
+        popupWindowWay.setOnDismissListener(new PopupWindow.OnDismissListener() {
+
+            @Override
+            public void onDismiss() {
+                WindowManager.LayoutParams lp = getWindow().getAttributes();
+                lp.alpha = 1f;
+                getWindow().setAttributes(lp);
+            }
+        });
 
         /* pop.xml视图里面的控件 */
-        Button	bttwgo	= (Button) popupWindow_view.findViewById( R.id.bt_twgo );
-        Button	btwgo	= (Button) popupWindow_view.findViewById( R.id.bt_wgo);
+        Button bttwgo = (Button) popupWindow_view.findViewById(R.id.bt_twgo);
+        Button btwgo = (Button) popupWindow_view.findViewById(R.id.bt_wgo);
+        final EditText etlng = (EditText) popupWindow_view.findViewById(R.id.et_lng);
+        final EditText etlat = (EditText) popupWindow_view.findViewById(R.id.et_lat);
+        final EditText etalt = (EditText) popupWindow_view.findViewById(R.id.et_alt);
+        final EditText etvel = (EditText) popupWindow_view.findViewById(R.id.et_vel);
 
 
-        bttwgo.setOnClickListener( new View.OnClickListener()
-        {
+        if (teamnum == 0) {
+            bttwgo.setEnabled(false);
+        } else {
+            if (teamleader == 0) {
+                bttwgo.setText("保存配置");
+            }
+        }
+
+        bttwgo.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick( View v )
-            {
-                /*
-                 * TODO Auto-generated method stub
-                 * 这里可以执行相关操作
-                 */
-                System.out.println( "打开操作" );
-                initPopupWindowConfirm();
+            public void onClick(View v) {
+                try {
+                    wayalt = Double.parseDouble(etalt.getText().toString());
+                    waylat = Double.parseDouble(etlat.getText().toString());
+                    waylng = Double.parseDouble(etlng.getText().toString());
+                    wayvel = Double.parseDouble(etvel.getText().toString());
+                } catch (Exception e) {
+                    initPopupWindowResult("参数不合法");
+                    popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                }
+                initPopupWindowConfirm(21);
                 popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
 
             }
@@ -391,75 +862,265 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         btwgo.setOnClickListener( new View.OnClickListener()
         {
             @Override
-            public void onClick( View v )
-            {
-                /*
-                 * TODO Auto-generated method stub
-                 * 这里可以执行相关操作
-                 */
-                System.out.println( "保存操作" );
-                initPopupWindowConfirm();
+            public void onClick( View v ) {
+                try {
+                    wayalt = Double.parseDouble(etalt.getText().toString());
+                    waylat = Double.parseDouble(etlat.getText().toString());
+                    waylng = Double.parseDouble(etlng.getText().toString());
+                    wayvel = Double.parseDouble(etvel.getText().toString());
+                } catch (Exception e) {
+                    initPopupWindowResult("参数不合法");
+                    popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                }
+                initPopupWindowConfirm(22);
                 popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-
             }
         } );
 
     }
 
-    protected void initPopupWindowHot()
-    {
+    protected void initPopupWindowHot() {
+        View popupWindow_view = getLayoutInflater().inflate(R.layout.pop_hot, null,
+                false);
+        /* 创建PopupWindow实例,200,150分别是宽度和高度 */
+        popupWindowHot = new PopupWindow(popupWindow_view, 1000, 1400, true);
+
+        popupWindowHot.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
+        popupWindowHot.setBackgroundDrawable(new BitmapDrawable());
+
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.alpha = 0.5f;//设置阴影透明度
+        getWindow().setAttributes(lp);
+        popupWindowHot.setOnDismissListener(new PopupWindow.OnDismissListener() {
+
+            @Override
+            public void onDismiss() {
+                WindowManager.LayoutParams lp = getWindow().getAttributes();
+                lp.alpha = 1f;
+                getWindow().setAttributes(lp);
+            }
+        });
+
+        /* pop.xml视图里面的控件 */
+        Button btthgo = (Button) popupWindow_view.findViewById(R.id.bt_thgo);
+        Button bthgo = (Button) popupWindow_view.findViewById(R.id.bt_hgo);
+        final EditText etlng = (EditText) popupWindow_view.findViewById(R.id.et_lng);
+        final EditText etlat = (EditText) popupWindow_view.findViewById(R.id.et_lat);
+        final EditText etalt = (EditText) popupWindow_view.findViewById(R.id.et_alt);
+        final EditText etw = (EditText) popupWindow_view.findViewById(R.id.et_w);
+        final EditText etr = (EditText) popupWindow_view.findViewById(R.id.et_r);
+        final Spinner spstart = (Spinner) popupWindow_view.findViewById(R.id.sp_start);
+
+        if (teamnum == 0) {
+            btthgo.setEnabled(false);
+        } else {
+            if (teamleader == 0) {
+                btthgo.setText("保存配置");
+            }
+        }
+
+        btthgo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    hotalt = Double.parseDouble(etalt.getText().toString());
+                    hotlat = Double.parseDouble(etlat.getText().toString());
+                    hotlng = Double.parseDouble(etlng.getText().toString());
+                    hotw = Double.parseDouble(etw.getText().toString());
+                    hotr = Double.parseDouble(etr.getText().toString());
+                    String tmp = spstart.getSelectedItem().toString();
+                    if (tmp.contains("东")) hotstart = "east";
+                    else if (tmp.contains("南")) hotstart = "south";
+                    else if (tmp.contains("西")) hotstart = "west";
+                    else if (tmp.contains("北")) hotstart = "north";
+                } catch (Exception e) {
+                    initPopupWindowResult("参数不合法");
+                    popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                }
+
+                initPopupWindowConfirm(31);
+                popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+
+            }
+        });
+
+        bthgo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    hotalt = Double.parseDouble(etalt.getText().toString());
+                    hotlat = Double.parseDouble(etlat.getText().toString());
+                    hotlng = Double.parseDouble(etlng.getText().toString());
+                    hotw = Double.parseDouble(etw.getText().toString());
+                    hotr = Double.parseDouble(etr.getText().toString());
+                    String tmp = spstart.getSelectedItem().toString();
+                    if (tmp.contains("东")) hotstart = "east";
+                    else if (tmp.contains("南")) hotstart = "south";
+                    else if (tmp.contains("西")) hotstart = "west";
+                    else if (tmp.contains("北")) hotstart = "north";
+                } catch (Exception e) {
+                    initPopupWindowResult("参数不合法");
+                    popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                }
+
+                initPopupWindowConfirm(32);
+                popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+
+            }
+        });
+
+    }
+
+    protected void initPopupWindowRotate() {
         /* TODO Auto-generated method stub */
 
         /* 获取自定义布局文件pop.xml的视图 */
-        View popupWindow_view = getLayoutInflater().inflate( R.layout.pop_hot, null,
-                false );
+        View popupWindow_view = getLayoutInflater().inflate(R.layout.pop_rotate, null,
+                false);
         /* 创建PopupWindow实例,200,150分别是宽度和高度 */
-        popupWindowHot = new PopupWindow( popupWindow_view, 1000, 1400, true );
+        popupWindowRotate = new PopupWindow(popupWindow_view, 500, 800, true);
 
+        popupWindowRotate.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
+        popupWindowRotate.setBackgroundDrawable(new BitmapDrawable());
 
-        /* 设置动画效果 */
-        popupWindowHot.setAnimationStyle( R.style.AnimationFade );
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.alpha = 0.5f;//设置阴影透明度
+        getWindow().setAttributes(lp);
+        popupWindowRotate.setOnDismissListener(new PopupWindow.OnDismissListener() {
+
+            @Override
+            public void onDismiss() {
+                WindowManager.LayoutParams lp = getWindow().getAttributes();
+                lp.alpha = 1f;
+                getWindow().setAttributes(lp);
+            }
+        });
 
         /* pop.xml视图里面的控件 */
-        Button	btthgo	= (Button) popupWindow_view.findViewById( R.id.bt_thgo );
-        Button	bthgo	= (Button) popupWindow_view.findViewById( R.id.bt_hgo);
+        Button bteast = (Button) popupWindow_view.findViewById(R.id.bt_east);
+        Button btwest = (Button) popupWindow_view.findViewById(R.id.bt_west);
+        Button btnorth = (Button) popupWindow_view.findViewById(R.id.bt_north);
+        Button btsouth = (Button) popupWindow_view.findViewById(R.id.bt_south);
 
 
-        btthgo.setOnClickListener( new View.OnClickListener()
-        {
+        bteast.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick( View v )
-            {
-                /*
-                 * TODO Auto-generated method stub
-                 * 这里可以执行相关操作
-                 */
-                System.out.println( "打开操作" );
-                initPopupWindowConfirm();
+            public void onClick(View v) {
+                initPopupWindowConfirm(41);
+                popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+            }
+        });
+
+        btwest.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                initPopupWindowConfirm(43);
                 popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
 
             }
-        } );
+        });
 
-        bthgo.setOnClickListener( new View.OnClickListener()
-        {
+        btnorth.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick( View v )
-            {
-                /*
-                 * TODO Auto-generated method stub
-                 * 这里可以执行相关操作
-                 */
-                System.out.println( "保存操作" );
-                initPopupWindowConfirm();
+            public void onClick(View v) {
+                initPopupWindowConfirm(44);
                 popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
 
             }
-        } );
+        });
+
+        btsouth.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                initPopupWindowConfirm(42);
+                popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+
+            }
+        });
 
     }
 
+    protected void initPopupWindowAutorotate() {
+        /* TODO Auto-generated method stub */
+
+        /* 获取自定义布局文件pop.xml的视图 */
+        View popupWindow_view = getLayoutInflater().inflate(R.layout.pop_autorotate, null,
+                false);
+        /* 创建PopupWindow实例,200,150分别是宽度和高度 */
+        popupWindowAutorotate = new PopupWindow(popupWindow_view, 1000, 600, true);
+
+        popupWindowAutorotate.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
+        popupWindowAutorotate.setBackgroundDrawable(new BitmapDrawable());
+
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.alpha = 0.5f;//设置阴影透明度
+        getWindow().setAttributes(lp);
+        popupWindowAutorotate.setOnDismissListener(new PopupWindow.OnDismissListener() {
+
+            @Override
+            public void onDismiss() {
+                WindowManager.LayoutParams lp = getWindow().getAttributes();
+                lp.alpha = 1f;
+                getWindow().setAttributes(lp);
+            }
+        });
+
+        /* pop.xml视图里面的控件 */
+        Button bttargo = (Button) popupWindow_view.findViewById(R.id.bt_targo);
+        Button btargo = (Button) popupWindow_view.findViewById(R.id.bt_argo);
+        final EditText etw = (EditText) popupWindow_view.findViewById(R.id.et_w);
+
+        if (teamnum == 0) {
+            bttargo.setEnabled(false);
+        } else {
+            if (teamleader == 0) {
+                bttargo.setText("保存配置");
+            }
+        }
+
+        bttargo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    autorotatew = Double.parseDouble(etw.getText().toString());
+                } catch (Exception e) {
+                    initPopupWindowResult("参数不合法");
+                    popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                }
+                initPopupWindowConfirm(51);
+                popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+
+            }
+        });
+
+        btargo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    autorotatew = Double.parseDouble(etw.getText().toString());
+                } catch (Exception e) {
+                    initPopupWindowResult("参数不合法");
+                    popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                }
+
+                initPopupWindowConfirm(52);
+                popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+            }
+        });
+
+    }
+
+    private class ConnectRunnable implements Runnable {
 
 
+        @Override
+        public void run() {
+            try {
+                serverConnector.connect();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 
 }
