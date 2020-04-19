@@ -1,4 +1,4 @@
-package com.demo.aircontrol.fragment;
+package com.demo.aircontrol.fragment.chart3Fragment;
 
 import android.content.Context;
 import android.graphics.Color;
@@ -6,11 +6,12 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
-import com.demo.aircontrol.ChartsMarkerView;
 import com.demo.aircontrol.DroneData;
 import com.demo.aircontrol.R;
+import com.demo.aircontrol.ui.util.ChartsMarkerView;
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
@@ -19,14 +20,14 @@ import com.github.mikephil.charting.data.LineDataSet;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DeltaAltFrag extends Fragment {
+public class DeltaPitchFrag extends Fragment {
 
     private DroneData droneData;
     private Context context;
 
     @NonNull
     public static Fragment newInstance() {
-        return new DeltaAltFrag();
+        return new DeltaPitchFrag();
     }
 
     @Override
@@ -37,24 +38,34 @@ public class DeltaAltFrag extends Fragment {
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        View v = inflater.inflate(R.layout.fragment_delta_alt, container, false);
-
+        View v = inflater.inflate(R.layout.fragment_delta_chart, container, false);
         droneData = DroneData.getInstance();
-        LineChart chart = v.findViewById(R.id.chart_delta_alt);
+
+        LineChart chart = v.findViewById(R.id.line_chart);
+        TextView avgText = v.findViewById(R.id.text2);
+        TextView maxText = v.findViewById(R.id.text4);
+        TextView minText = v.findViewById(R.id.text6);
+        TextView varianceText = v.findViewById(R.id.text8);
 
         List<Entry> entries = new ArrayList<Entry>();
-        // turn your data into Entry objects
-        ArrayList<Double> altData = droneData.getDeltaAlt();
+
+        //get data
+        ArrayList<Double> data = droneData.getDeltaPitch();
+
+        //set Bottom Text
+        avgText.setText(DroneData.calcAvg(data).toString());
+        maxText.setText(DroneData.calcMax(data).toString());
+        minText.setText(DroneData.calcMin(data).toString());
+        varianceText.setText(DroneData.calcVariance(data).toString());
+
         int i = 0;
-        for (double d : altData) {
-            entries.add(new Entry(i, (float) (d)));
+        for (double d : data) {
+            entries.add(new Entry(i, (float) d));
             i++;
         }
-        LineDataSet dataSet = new LineDataSet(entries, "高度差"); // add entries to dataset
-
+        LineDataSet dataSet = new LineDataSet(entries, "俯仰角变化量"); // add entries to dataset
         dataSet.setCircleColor(Color.BLACK);
         dataSet.setCircleRadius(1f);
-
         LineData lineData = new LineData(dataSet);
 
         //add MarkerView
@@ -62,12 +73,11 @@ public class DeltaAltFrag extends Fragment {
         mv.setChartView(chart);
         chart.setMarker(mv);
 
-
         //Change Yaxis
-//        chart.getAxisLeft().setValueFormatter(new ValueOffsetFormatter(droneData.latAnchor));
+//        chart.getAxisLeft().setValueFormatter(new ValueOffsetFormatter(droneData.lngAnchor));
         chart.getAxisRight().setEnabled(false);
 
-        chart.getDescription().setText("高度差变化曲线");
+        chart.getDescription().setText("俯仰角变化量曲线");
 //        dataSet.setColor(...);
 //        dataSet.setValueTextColor(...);
 

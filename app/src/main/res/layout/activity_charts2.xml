@@ -23,14 +23,14 @@
         <!--                android:textAppearance="@style/TextAppearance.Widget.AppCompat.Toolbar.Title"/>-->
 
         <com.google.android.material.tabs.TabLayout
-                android:id="@+id/tabs2"
+                android:id="@+id/tabs"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="?attr/colorPrimary"/>
     </com.google.android.material.appbar.AppBarLayout>
 
-    <com.demo.aircontrol.NoScrollViewPager
-            android:id="@+id/view_pager2"
+    <com.demo.aircontrol.ui.util.NoScrollViewPager
+            android:id="@+id/view_pager"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:isScrollContainer="false"

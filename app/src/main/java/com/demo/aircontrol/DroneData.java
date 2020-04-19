@@ -75,9 +75,59 @@ public class DroneData {
         format = new SimpleDateFormat("yyyy_MM_dd-hh:mm:ss");
     }
 
+    public static Double calcAvg(ArrayList<Double> data) {
+        Double sum = 0d, avg = 0d;
+        for (Double d : data) {
+            sum += d;
+        }
+        if (data.size() != 0) {
+            avg = sum / data.size();
+        }
+        return avg;
+    }
+
+    public static Double calcMax(ArrayList<Double> data) {
+        Double max = 0d;
+        for (Double d : data) {
+            if (d > max) {
+                max = d;
+            }
+        }
+        return max;
+    }
+
+    public static Double calcMin(ArrayList<Double> data) {
+        Double min = 0d;
+        if (data.size() != 0) {
+            min = data.get(0);
+            for (Double d : data) {
+                if (d < min) {
+                    min = d;
+                }
+            }
+        }
+        return min;
+    }
+
+    public static Double calcVariance(ArrayList<Double> data) {
+        Double var = 0d;
+        if (data.size() != 0) {
+            Double avg = calcAvg(data);
+            Double sum = 0d;
+            for (Double d : data) {
+                sum += (d - avg) * (d - avg);
+            }
+            var = sum / data.size();
+        }
+        return var;
+    }
+
     public void loadGPSData(String dir) {
         initData();
         try {
+            //uncomment this for debug
+            //InputStreamReader fileReader = new InputStreamReader(context.getResources().openRawResource(R.raw.testdata));
+
             FileReader fileReader = new FileReader(dir);
             BufferedReader in = new BufferedReader(fileReader);
             String str = "";

@@ -3,7 +3,7 @@ package com.demo.aircontrol;
 import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.viewpager.widget.ViewPager;
-import com.demo.aircontrol.ui.main.Charts1PagerAdapter;
+import com.demo.aircontrol.ui.util.Charts1PagerAdapter;
 import com.google.android.material.tabs.TabLayout;
 
 public class Charts1Activity extends AppCompatActivity {

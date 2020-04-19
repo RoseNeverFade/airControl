@@ -18,7 +18,7 @@
     <string name="tab_text_5">姿态角</string>
     <string name="title_activity_charts2">Charts2Activity</string>
 
-    <string name="tab_text_6">高度差</string>
+    <string name="tab_text_6">高度</string>
     <string name="tab_text_7">距离差</string>
     <string name="tab_text_8">经度差</string>
     <string name="tab_text_9">纬度差</string>

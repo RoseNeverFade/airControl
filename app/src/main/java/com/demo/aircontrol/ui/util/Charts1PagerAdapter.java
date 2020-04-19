@@ -1,4 +1,4 @@
-package com.demo.aircontrol.ui.main;
+package com.demo.aircontrol.ui.util;
 
 import android.content.Context;
 import androidx.annotation.Nullable;
@@ -7,19 +7,22 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentPagerAdapter;
 import com.demo.aircontrol.R;
-import com.demo.aircontrol.fragment.*;
+import com.demo.aircontrol.fragment.AltFrag;
+import com.demo.aircontrol.fragment.LatFrag;
+import com.demo.aircontrol.fragment.LngFrag;
+import com.demo.aircontrol.fragment.RoadMapFrag;
 
 /**
  * A [FragmentPagerAdapter] that returns a fragment corresponding to
  * one of the sections/tabs/pages.
  */
-public class Charts3PagerAdapter extends FragmentPagerAdapter {
+public class Charts1PagerAdapter extends FragmentPagerAdapter {
 
     @StringRes
-    private static final int[] TAB_TITLES = new int[]{R.string.tab_text_6, R.string.tab_text_7, R.string.tab_text_8, R.string.tab_text_9, R.string.tab_text_10, R.string.tab_text_11, R.string.tab_text_12};
+    private static final int[] TAB_TITLES = new int[]{R.string.tab_text_1, R.string.tab_text_2, R.string.tab_text_3, R.string.tab_text_4};
     private final Context mContext;
 
-    public Charts3PagerAdapter(Context context, FragmentManager fm) {
+    public Charts1PagerAdapter(Context context, FragmentManager fm) {
         super(fm);
         mContext = context;
     }
@@ -29,19 +32,13 @@ public class Charts3PagerAdapter extends FragmentPagerAdapter {
         // getItem is called to instantiate the fragment for the given page.
         // Return a PlaceholderFragment (defined as a static inner class below).
         if (position == 0) {
-            return DeltaAltFrag.newInstance();
+            return LngFrag.newInstance();
         } else if (position == 1) {
-            return DeltaDistanceFrag.newInstance();
+            return LatFrag.newInstance();
         } else if (position == 2) {
-            return DeltaLngFrag.newInstance();
-        } else if (position == 3) {
-            return DeltaLatFrag.newInstance();
-        } else if (position == 4) {
-            return DeltaYawFrag.newInstance();
-        } else if (position == 5) {
-            return DeltaPitchFrag.newInstance();
+            return AltFrag.newInstance();
         } else {
-            return DeltaRollFrag.newInstance();
+            return RoadMapFrag.newInstance();
         }
     }
 
@@ -53,6 +50,6 @@ public class Charts3PagerAdapter extends FragmentPagerAdapter {
 
     @Override
     public int getCount() {
-        return 7;
+        return 4;
     }
 }

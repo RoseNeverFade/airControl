@@ -1,4 +1,4 @@
-package com.demo.aircontrol.ui.main;
+package com.demo.aircontrol.ui.util;
 
 import android.content.Context;
 import androidx.annotation.Nullable;

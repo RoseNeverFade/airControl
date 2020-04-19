@@ -1,8 +1,10 @@
-package com.demo.aircontrol;
+package com.demo.aircontrol.ui.util;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.widget.TextView;
+import com.demo.aircontrol.DroneData;
+import com.demo.aircontrol.R;
 import com.github.mikephil.charting.components.MarkerView;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.highlight.Highlight;
