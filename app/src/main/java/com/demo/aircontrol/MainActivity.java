@@ -392,6 +392,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         pitchlist = new ArrayList<>();
         rolllist = new ArrayList<>();
 
+        if (MyBuildConfig.isDebug) {
+            droneData.loadFakeGPSData();
+        }
     }
 
     private void showFileChooser() {
