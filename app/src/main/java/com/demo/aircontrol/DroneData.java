@@ -5,6 +5,7 @@ import android.content.Context;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -39,7 +40,7 @@ public class DroneData {
 
     private Context context;
 
-    SimpleDateFormat df = new SimpleDateFormat("yyyy/MM/dd-HH:mm:ss:SSS");//设置日期格式
+    public SimpleDateFormat df = new SimpleDateFormat("yyyy/MM/dd-HH:mm:ss:SSS");//设置日期格式
 
     //单例模式，保证全局只有一个DroneData
     private DroneData() {
@@ -135,10 +136,29 @@ public class DroneData {
                 //TODO: 异常处理
                 return;
             }
-//            int lines = Integer.parseInt(str);
-//            if (lines == lineNum) {
-//                return;
-//            }
+            in.readLine();
+            while ((str = in.readLine()) != null) {
+                clipGPSData(str);
+            }
+            calculateDelta();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void loadFakeGPSData() {
+        initData();
+        try {
+            //uncomment this for debug
+            InputStreamReader fileReader = new InputStreamReader(context.getResources().openRawResource(R.raw.testdata));
+
+//            FileReader fileReader = new FileReader(dir);
+            BufferedReader in = new BufferedReader(fileReader);
+            String str = "";
+            if ((str = in.readLine()) == null) {
+                //TODO: 异常处理
+                return;
+            }
             in.readLine();
             while ((str = in.readLine()) != null) {
                 clipGPSData(str);
