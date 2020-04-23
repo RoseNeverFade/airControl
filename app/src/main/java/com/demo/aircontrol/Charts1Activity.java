@@ -1,5 +1,6 @@
 package com.demo.aircontrol;
 
+import android.annotation.SuppressLint;
 import android.graphics.Color;
 import android.graphics.DashPathEffect;
 import android.graphics.Paint;
@@ -22,8 +23,11 @@ public class Charts1Activity extends AppCompatActivity {
 
 
     SampleDynamicXYDatasource data;
-    SampleDynamicSeries sine1Series;
+    SampleDynamicSeries drone1Series;
+    ScatterSeries drone1Scatters;
+    ScatterTop scatterTop;
     private XYPlot dynamicPlot;
+    private XYPlot scatterPlot;
     private MyPlotUpdater plotUpdater;
     private Thread myThread;
     private Button buttonPlay;
@@ -32,6 +36,13 @@ public class Charts1Activity extends AppCompatActivity {
     private DroneData droneData;
     private TextView text_alt;
     private TextView text_time;
+
+    private TextView text_yaw;
+    private TextView text_pitch;
+    private TextView text_roll;
+    private TextView text_x;
+    private TextView text_y;
+
     private Handler textUpdateHandler = new Handler(new Handler.Callback() {
         @Override
         public boolean handleMessage(Message msg) {
@@ -50,6 +61,11 @@ public class Charts1Activity extends AppCompatActivity {
 
         text_alt = findViewById(R.id.text_alt);
         text_time = findViewById(R.id.text_time);
+        text_yaw = findViewById(R.id.tt1);
+        text_pitch = findViewById(R.id.tt2);
+        text_roll = findViewById(R.id.tt3);
+        text_x = findViewById(R.id.tt4);
+        text_y = findViewById(R.id.tt5);
 
         buttonPlay = findViewById(R.id.button_play);
         buttonPause = findViewById(R.id.button_pause);
@@ -78,8 +94,9 @@ public class Charts1Activity extends AppCompatActivity {
 
         // initialize our XYPlot reference:
         dynamicPlot = (XYPlot) findViewById(R.id.plot);
+        scatterPlot = (XYPlot) findViewById(R.id.scatter);
 
-        plotUpdater = new MyPlotUpdater(dynamicPlot);
+        plotUpdater = new MyPlotUpdater(dynamicPlot, scatterPlot);
 
         dataInit();
 
@@ -92,6 +109,12 @@ public class Charts1Activity extends AppCompatActivity {
 //        dynamicPlot.addSeries(sine2Series, formatter2);
 
         int upperBoundary = DroneData.calcMax(droneData.getGpsAlt()).intValue() + 1;
+
+        int xMax = DroneData.calcMax(droneData.getGpsLat()).intValue() + 1;
+        int xMin = DroneData.calcMin(droneData.getGpsLat()).intValue() - 1;
+        int yMax = DroneData.calcMax(droneData.getGpsLng()).intValue() + 1;
+        int yMin = DroneData.calcMin(droneData.getGpsLng()).intValue() - 1;
+
         //int lowerBoundary =DroneData.calcMin(droneData.getGpsAlt()).intValue()- 1;
 
         // thin out domain tick labels so they dont overlap each other:
@@ -111,6 +134,11 @@ public class Charts1Activity extends AppCompatActivity {
         dynamicPlot.setDomainBoundaries(0, SampleDynamicXYDatasource.WINDOW_SIZE, BoundaryMode.FIXED);
         //dynamicPlot.setRangeBoundaries(0, 20, BoundaryMode.FIXED);
 
+
+        scatterPlot.setDomainBoundaries(xMin, xMax, BoundaryMode.FIXED);
+        scatterPlot.setRangeBoundaries(yMin, yMax, BoundaryMode.FIXED);
+
+
         // create a dash effect for domain and range grid lines:
         DashPathEffect dashFx = new DashPathEffect(
                 new float[]{PixelUtils.dpToPix(3), PixelUtils.dpToPix(3)}, 0);
@@ -119,6 +147,10 @@ public class Charts1Activity extends AppCompatActivity {
     }
 
     private void dataInit() {
+        data = new SampleDynamicXYDatasource();
+        data.addObserver(plotUpdater);
+
+        //===============XY Plot===============
         dynamicPlot.clear();
 
         // only display whole numbers in domain labels
@@ -126,25 +158,45 @@ public class Charts1Activity extends AppCompatActivity {
                 setFormat(new DecimalFormat("0"));
 
         // getInstance and position datasets:
-        data = new SampleDynamicXYDatasource();
-        sine1Series = new SampleDynamicSeries(data, 0, "Drone 1");
+
+        drone1Series = new SampleDynamicSeries(data, 0, "Drone 1");
 //        SampleDynamicSeries sine2Series = new SampleDynamicSeries(data, 1, "Drone 2");
 
         LineAndPointFormatter formatter1 = new LineAndPointFormatter(
                 Color.rgb(0, 200, 0), null, null, null);
         formatter1.getLinePaint().setStrokeJoin(Paint.Join.ROUND);
         formatter1.getLinePaint().setStrokeWidth(3);
-        dynamicPlot.addSeries(sine1Series,
-                formatter1);
+
+        dynamicPlot.addSeries(drone1Series, formatter1);
 
         // hook up the plotUpdater to the data model:
-        data.addObserver(plotUpdater);
+
+
+        //===============Scatter Plot===============
+        scatterPlot.clear();
+
+        drone1Scatters = new ScatterSeries(data, 0, "Drone 1");
+        LineAndPointFormatter formatter2 =
+                new LineAndPointFormatter(this, R.xml.point_formatter);
+        scatterPlot.addSeries(drone1Scatters, formatter2);
+
+        //===============Scatter Top================
+        scatterTop = new ScatterTop(data, 0, "Drone 1");
+        LineAndPointFormatter formatter_top =
+                new LineAndPointFormatter(this, R.xml.point_formatter_2);
+        scatterPlot.addSeries(scatterTop, formatter_top);
+
     }
 
+    @SuppressLint("SetTextI18n")
     void updateText() {
         text_alt.setText(droneData.getGpsAlt().get(data.counts - 1).toString());
-
         text_time.setText(droneData.df.format(droneData.getGpsTime().get(data.counts - 1)));
+        text_yaw.setText(droneData.getGpsYaw().get(data.counts - 1).toString());
+        text_pitch.setText(droneData.getGpsPitch().get(data.counts - 1).toString());
+        text_roll.setText(droneData.getGpsRoll().get(data.counts - 1).toString());
+        text_x.setText(droneData.getGpsLat().get(data.counts - 1).toString());
+        text_y.setText(droneData.getGpsLng().get(data.counts - 1).toString());
     }
 
     public int calcRangeStep(int maxVal, int stepNum) {
@@ -171,9 +223,9 @@ public class Charts1Activity extends AppCompatActivity {
 
     public void play() {
         if (replay) {
-            refreshData();
-            dataInit();
             replay = false;
+            //refreshData();
+            dataInit();
         }
         // kick off the data generating thread:
         myThread = new Thread(data);
@@ -193,10 +245,10 @@ public class Charts1Activity extends AppCompatActivity {
 
     }
 
-    @Override
-    public void onResume() {
-        super.onResume();
-    }
+//    @Override
+//    public void onResume() {
+//        super.onResume();
+//    }
 
     @Override
     public void onPause() {
@@ -205,15 +257,18 @@ public class Charts1Activity extends AppCompatActivity {
     }
 
     private class MyPlotUpdater implements Observer {
-        Plot plot;
+        Plot xyPlot;
+        Plot scatterPlot;
 
-        public MyPlotUpdater(Plot plot) {
-            this.plot = plot;
+        public MyPlotUpdater(Plot xyPlot, Plot scatterPlot) {
+            this.xyPlot = xyPlot;
+            this.scatterPlot = scatterPlot;
         }
 
         @Override
         public void update(Observable o, Object arg) {
-            plot.redraw();
+            xyPlot.redraw();
+            scatterPlot.redraw();
         }
     }
 
@@ -222,7 +277,7 @@ public class Charts1Activity extends AppCompatActivity {
         static final int DRONE1 = 0;
         static final int DRONE2 = 1;
         static final int DRONE3 = 2;
-        private static final double FREQUENCY = 50; // larger is lower frequency
+        private static final long SLEEPTIME = 80; // update data per SLEEPTIME ms
         private static final int WINDOW_SIZE = 40;
         public int counts = 0;
         private int xySize = 0;
@@ -250,7 +305,7 @@ public class Charts1Activity extends AppCompatActivity {
                 keepRunning = true;
                 boolean isRising = true;
                 while (keepRunning) {
-                    Thread.sleep(20); // decrease or remove to speed up the refresh rate.
+                    Thread.sleep(SLEEPTIME); // decrease or remove to speed up the refresh rate.
                     counts++;
                     if (counts > maxSize) {
                         stopThread();
@@ -266,20 +321,46 @@ public class Charts1Activity extends AppCompatActivity {
             }
         }
 
-        int getXYItemCount(int series) {
+        int getHistoryItemCount(int series) {
             return (counts > WINDOW_SIZE) ? WINDOW_SIZE : counts;
         }
 
+        int getXYItemCount(int series) {
+            return counts;
+        }
+
         Number getX(int series, int index) {
+            if (index >= counts) {
+                throw new IllegalArgumentException();
+            }
+            return droneData.getGpsLat().get(index); //TODO:
+        }
+
+        Number getY(int series, int index) {
+            if (index >= counts) {
+                throw new IllegalArgumentException();
+            }
+            return droneData.getGpsLng().get(index);//TODO:
+        }
+
+        Number getTopX(int series) {
+            return droneData.getGpsLat().get(counts - 1); //TODO:
+        }
+
+        Number getTopY(int series) {
+            return droneData.getGpsLng().get(counts - 1); //TODO:
+        }
+
+
+        Number getTime(int series, int index) {
             if (index >= WINDOW_SIZE) {
                 throw new IllegalArgumentException();
             }
             return index;
         }
 
-        Number getY(int series, int index) {
+        Number getAlt(int series, int index) {
             if (index >= WINDOW_SIZE) {
-//                return 0;
                 throw new IllegalArgumentException();
             }
             switch (series) {
@@ -329,6 +410,38 @@ public class Charts1Activity extends AppCompatActivity {
 
         @Override
         public int size() {
+            return datasource.getHistoryItemCount(seriesIndex);
+        }
+
+        @Override
+        public Number getX(int index) {
+            return datasource.getTime(seriesIndex, index);
+        }
+
+        @Override
+        public Number getY(int index) {
+            return datasource.getAlt(seriesIndex, index);
+        }
+    }
+
+    class ScatterSeries implements XYSeries {
+        private SampleDynamicXYDatasource datasource;
+        private int seriesIndex;
+        private String title;
+
+        ScatterSeries(SampleDynamicXYDatasource datasource, int seriesIndex, String title) {
+            this.datasource = datasource;
+            this.seriesIndex = seriesIndex;
+            this.title = title;
+        }
+
+        @Override
+        public String getTitle() {
+            return title;
+        }
+
+        @Override
+        public int size() {
             return datasource.getXYItemCount(seriesIndex);
         }
 
@@ -340,6 +453,38 @@ public class Charts1Activity extends AppCompatActivity {
         @Override
         public Number getY(int index) {
             return datasource.getY(seriesIndex, index);
+        }
+    }
+
+    class ScatterTop implements XYSeries {
+        private SampleDynamicXYDatasource datasource;
+        private int seriesIndex;
+        private String title;
+
+        ScatterTop(SampleDynamicXYDatasource datasource, int seriesIndex, String title) {
+            this.datasource = datasource;
+            this.seriesIndex = seriesIndex;
+            this.title = title;
+        }
+
+        @Override
+        public String getTitle() {
+            return title;
+        }
+
+        @Override
+        public int size() {
+            return 1;
+        }
+
+        @Override
+        public Number getX(int index) {
+            return datasource.getTopX(seriesIndex);
+        }
+
+        @Override
+        public Number getY(int index) {
+            return datasource.getTopY(seriesIndex);
         }
     }
 }

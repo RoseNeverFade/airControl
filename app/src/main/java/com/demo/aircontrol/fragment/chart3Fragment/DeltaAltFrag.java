@@ -82,7 +82,7 @@ public class DeltaAltFrag extends Fragment {
         chart.getAxisRight().setEnabled(false);
 
         //设置图表描述
-        chart.getDescription().setText("高度差变化曲线");
+        chart.getDescription().setText("高度变化曲线");
 //        dataSet.setColor(...);
 //        dataSet.setValueTextColor(...);
 

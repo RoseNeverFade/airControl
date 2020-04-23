@@ -11,6 +11,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.regex.Pattern;
 
 
 public class DroneData {
@@ -159,7 +160,9 @@ public class DroneData {
                 //TODO: 异常处理
                 return;
             }
-            in.readLine();
+            if (Pattern.matches("^\\s*$", str)) {
+                in.readLine();
+            }
             while ((str = in.readLine()) != null) {
                 clipGPSData(str);
             }
