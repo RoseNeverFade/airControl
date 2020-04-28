@@ -184,6 +184,8 @@
                     android:id="@+id/plot"
                     android:layout_width="fill_parent"
                     android:layout_height="fill_parent"
+                    ap:gridInsetBottom="-10dp"
+                    ap:lineLabelInsetBottom="-20dp"
                     ap:title="当前高度"
                     ap:rangeTitle="高度"
                     ap:domainTitle="时间"

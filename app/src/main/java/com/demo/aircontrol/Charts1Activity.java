@@ -23,8 +23,8 @@ import java.util.Observer;
 public class Charts1Activity extends AppCompatActivity {
 
 
-    SampleDynamicXYDatasource data;
-    SampleDynamicSeries drone1Series;
+    MyXYDatasource data;
+    DynamicSeries drone1Series;
     ScatterSeries drone1Scatters;
     DroneIcon droneIcon;
     private XYPlot dynamicPlot;
@@ -35,9 +35,9 @@ public class Charts1Activity extends AppCompatActivity {
     private Button buttonPause;
     private Button buttonReplay;
     private DroneData droneData;
+
     private TextView text_alt;
     private TextView text_time;
-
     private TextView text_yaw;
     private TextView text_pitch;
     private TextView text_roll;
@@ -132,7 +132,7 @@ public class Charts1Activity extends AppCompatActivity {
 
         // uncomment this line to freeze the range boundaries:
         dynamicPlot.setRangeBoundaries(0, upperBoundary, BoundaryMode.FIXED);
-        dynamicPlot.setDomainBoundaries(0, SampleDynamicXYDatasource.WINDOW_SIZE, BoundaryMode.FIXED);
+        dynamicPlot.setDomainBoundaries(0, MyXYDatasource.WINDOW_SIZE, BoundaryMode.FIXED);
         //dynamicPlot.setRangeBoundaries(0, 20, BoundaryMode.FIXED);
 
 
@@ -162,7 +162,7 @@ public class Charts1Activity extends AppCompatActivity {
     }
 
     private void dataInit() {
-        data = new SampleDynamicXYDatasource();
+        data = new MyXYDatasource();
         data.addObserver(plotUpdater);
 
         //===============XY Plot===============
@@ -172,22 +172,18 @@ public class Charts1Activity extends AppCompatActivity {
         dynamicPlot.getGraph().getLineLabelStyle(XYGraphWidget.Edge.BOTTOM).
                 setFormat(new DecimalFormat("0"));
 
-        // getInstance and position datasets:
-
-        drone1Series = new SampleDynamicSeries(data, 0, "Drone 1");
-//        SampleDynamicSeries sine2Series = new SampleDynamicSeries(data, 1, "Drone 2");
+        // get datasets:
+        drone1Series = new DynamicSeries(data, 0, "Drone 1");
 
         LineAndPointFormatter formatter1 = new LineAndPointFormatter(
                 Color.rgb(0, 200, 0), null, null, null);
         formatter1.getLinePaint().setStrokeJoin(Paint.Join.ROUND);
         formatter1.getLinePaint().setStrokeWidth(3);
-
+        formatter1.setLegendIconEnabled(false);
         dynamicPlot.addSeries(drone1Series, formatter1);
 
-        // hook up the plotUpdater to the data model:
 
-
-        //===============Scatter Plot===============25
+        //===============Scatter Plot===============
         scatterPlot.clear();
 
         drone1Scatters = new ScatterSeries(data, 0, "Drone 1");
@@ -298,7 +294,7 @@ public class Charts1Activity extends AppCompatActivity {
         }
     }
 
-    class SampleDynamicXYDatasource implements Runnable {
+    class MyXYDatasource implements Runnable {
 
         static final int DRONE1 = 0;
         static final int DRONE2 = 1;
@@ -317,7 +313,7 @@ public class Charts1Activity extends AppCompatActivity {
             notifier = new MyObservable();
         }
 
-        SampleDynamicXYDatasource() {
+        MyXYDatasource() {
             maxSize = droneData.getGpsAlt().size();
         }
 
@@ -418,12 +414,12 @@ public class Charts1Activity extends AppCompatActivity {
 
     }
 
-    class SampleDynamicSeries implements XYSeries {
-        private SampleDynamicXYDatasource datasource;
+    class DynamicSeries implements XYSeries {
+        private MyXYDatasource datasource;
         private int seriesIndex;
         private String title;
 
-        SampleDynamicSeries(SampleDynamicXYDatasource datasource, int seriesIndex, String title) {
+        DynamicSeries(MyXYDatasource datasource, int seriesIndex, String title) {
             this.datasource = datasource;
             this.seriesIndex = seriesIndex;
             this.title = title;
@@ -451,11 +447,11 @@ public class Charts1Activity extends AppCompatActivity {
     }
 
     class ScatterSeries implements XYSeries {
-        private SampleDynamicXYDatasource datasource;
+        private MyXYDatasource datasource;
         private int seriesIndex;
         private String title;
 
-        ScatterSeries(SampleDynamicXYDatasource datasource, int seriesIndex, String title) {
+        ScatterSeries(MyXYDatasource datasource, int seriesIndex, String title) {
             this.datasource = datasource;
             this.seriesIndex = seriesIndex;
             this.title = title;
@@ -483,7 +479,7 @@ public class Charts1Activity extends AppCompatActivity {
     }
 
     class DroneIcon implements XYSeries {
-        private SampleDynamicXYDatasource datasource;
+        private MyXYDatasource datasource;
         private int seriesIndex;
         public DroneIconHead droneIconHead;
         private ArrayList<Point> iconPoints;
@@ -492,7 +488,7 @@ public class Charts1Activity extends AppCompatActivity {
         private double lineLength = 10;
         private double yaw = 0;
 
-        DroneIcon(SampleDynamicXYDatasource datasource, int seriesIndex, String title) {
+        DroneIcon(MyXYDatasource datasource, int seriesIndex, String title) {
             this.datasource = datasource;
             this.seriesIndex = seriesIndex;
             this.title = title;

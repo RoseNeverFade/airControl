@@ -1,6 +1,8 @@
 package com.demo.aircontrol;
 
 import android.content.Intent;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Bundle;
@@ -12,6 +14,8 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.*;
 import androidx.appcompat.app.AppCompatActivity;
+import com.androidplot.util.PixelUtils;
+import com.androidplot.xy.*;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -19,12 +23,23 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 
 import static java.lang.Thread.sleep;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, ClientConnector.ConnectLinstener {
+
+    //可视化相关
+    ScatterSeries routeScatters;
+    SimpleXYSeries heightSeries;
+    DroneIcon droneIcon;
+    ArrayList<Point> points;
+    ArrayList<Point> roundPoints;
+    boolean testStart = false;
+    private XYPlot heightPlot;
+
 
     //显示信息
     private TextView tLng;
@@ -43,7 +58,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private static final int FILE_SELECT_CODE = 0;
     private Button btnPic1; //Button A
     private Button btnPic2; //Button A
-    private Button btnData; //Button A
+    private XYPlot routePlot;
 
     private TextView missioninfo;
     private Button btstop;
@@ -309,6 +324,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    private Button btnPic3; //Button A
+
     private void initUI() {
 
         //显示信息
@@ -318,6 +335,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         tPitch = (TextView) findViewById(R.id.textPitch);
         tRoll = (TextView) findViewById(R.id.textRoll);
         tYaw = (TextView) findViewById(R.id.textYaw);
+
+        tYaw.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                testChart();
+            }
+        });
 
         // ---------------设置单击事件-------------------------
         //  private Button btnDemRecord;//记录经纬数据
@@ -356,8 +380,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         });
 
-        btnData = (Button) findViewById(R.id.btn_data);
-        btnData.setOnClickListener(new View.OnClickListener() {
+        btnPic3 = (Button) findViewById(R.id.btn_pic3);
+        btnPic3.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 Intent intent = new Intent(MainActivity.this, Charts3Activity.class);
@@ -392,8 +416,148 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         pitchlist = new ArrayList<>();
         rolllist = new ArrayList<>();
 
+        //可视化设置
+        heightPlot = (XYPlot) findViewById(R.id.height_plot);
+        routePlot = (XYPlot) findViewById(R.id.route_plot);
+        initChartData();
+
         if (MyBuildConfig.isDebug) {
             droneData.loadFakeGPSData();
+        }
+    }
+
+    //初始化图表数据
+    private void initChartData() {
+        heightPlot.clear();
+        routePlot.clear();
+        points = new ArrayList<Point>();
+
+        //===============routePlot================
+        //Scatter
+        routeScatters = new ScatterSeries(points, "Drone 1");
+        LineAndPointFormatter scatterFormatter = new LineAndPointFormatter(this, R.xml.point_formatter);
+        scatterFormatter.setLegendIconEnabled(false);
+        routePlot.addSeries(routeScatters, scatterFormatter);
+        routePlot.setRangeBoundaries(-100, 100, BoundaryMode.GROW);
+        routePlot.setDomainBoundaries(-100, 100, BoundaryMode.GROW);
+
+        //Drone Icon
+        droneIcon = new DroneIcon("Drone 1");
+        LineAndPointFormatter iconFormatter =
+                new LineAndPointFormatter(this, R.xml.point_formatter_2);
+        iconFormatter.setLegendIconEnabled(false);
+        routePlot.addSeries(droneIcon, iconFormatter);
+        //Drone Icon Head
+        LineAndPointFormatter headFormatter =
+                new LineAndPointFormatter(this, R.xml.point_formatter_3);
+        headFormatter.setLegendIconEnabled(false);
+        routePlot.addSeries(droneIcon.droneIconHead, headFormatter);
+
+        //===============heightPlot================
+        heightSeries = new SimpleXYSeries(SimpleXYSeries.ArrayFormat.Y_VALS_ONLY, "height");
+        BarFormatter barFormatter = new BarFormatter(Color.rgb(0x66, 0xcc, 0xff), Color.rgb(0x66, 0xcc, 0xaa));
+        barFormatter.setLegendIconEnabled(false);
+        heightPlot.addSeries(heightSeries, barFormatter);
+        heightPlot.setDomainBoundaries(-1, 1, BoundaryMode.FIXED);
+        heightPlot.setDomainStepValue(3);
+        heightPlot.setRangeBoundaries(0, 100, BoundaryMode.GROW);
+
+        // get a ref to the BarRenderer so we can make some changes to it:
+        BarRenderer barRenderer = heightPlot.getRenderer(BarRenderer.class);
+        if (barRenderer != null) {
+            // make our bars a little thicker than the default so they can be seen better:
+            barRenderer.setBarGroupWidth(
+                    BarRenderer.BarGroupWidthMode.FIXED_WIDTH, PixelUtils.dpToPix(18));
+        }
+
+    }
+
+    /**
+     * 插入并更新图表数据
+     *
+     * @param point 新的点 Point(Number x,Number y)
+     * @param yaw   偏航角
+     */
+    private void addChartPoint(Point point, double yaw, double height) {
+        points.add(point);
+        droneIcon.updateIcon(point, yaw);
+        routePlot.redraw();
+//        heightSeries.clear();
+        heightSeries.setModel(Arrays.asList(
+                new Number[]{height}),
+                SimpleXYSeries.ArrayFormat.Y_VALS_ONLY);
+        heightPlot.redraw();
+    }
+
+    /**
+     * 设置目标圆形（正128边形）轨迹
+     *
+     * @param axis 圆心 Point(Number x,Number y)
+     * @param r    半径
+     */
+    private void addCircle(Point axis, double r) {
+        int pointNum = 128;
+        SimpleXYSeries circleSeries = new SimpleXYSeries("circlePoint");
+        SimpleXYSeries axisSeries = new SimpleXYSeries("axis");
+        axisSeries.addFirst(axis.x, axis.y);
+
+        double theta = 2 * Math.PI / pointNum;
+        for (int i = 0; i < 128; i++) {
+            Number x = axis.x.doubleValue() + r * Math.cos(theta * i);
+            Number y = axis.y.doubleValue() + r * Math.sin(theta * i);
+            circleSeries.addFirst(x, y);
+        }
+        LineAndPointFormatter axisFormatter =
+                new LineAndPointFormatter(this, R.xml.circle_axis_formatter);
+        LineAndPointFormatter circleFormatter = new LineAndPointFormatter(
+                Color.rgb(0, 200, 0), null, null, null);
+        circleFormatter.getLinePaint().setStrokeJoin(Paint.Join.ROUND);
+        circleFormatter.getLinePaint().setStrokeWidth(2);
+
+        axisFormatter.setLegendIconEnabled(false);
+        circleFormatter.setLegendIconEnabled(false);
+        routePlot.addSeries(axisSeries, axisFormatter);
+        routePlot.addSeries(circleSeries, circleFormatter);
+    }
+
+    /**
+     * 测试可视化图表，仅debug模式可用
+     */
+    private void testChart() {
+        if (!testStart && MyBuildConfig.isDebug) {
+            testStart = true;
+            ChartTestThread myThread = new ChartTestThread(this);
+            myThread.start();
+        }
+    }
+
+    class ChartTestThread extends Thread {
+        MainActivity m;
+
+        ChartTestThread(MainActivity m) {
+            this.m = m;
+        }
+
+        @Override
+        public void run() {
+            double r = 60d;
+            int num = 720;
+            double h = 30d;
+            m.addCircle(new Point(0, 0), r);
+            double theta = 2 * Math.PI / 360;
+            for (int i = 0; i < 720; i++) {
+                double t = theta * i;
+                Number x = r * Math.cos(t);
+                Number y = r * Math.sin(t);
+                double yaw = Math.toDegrees(t) + 90;
+
+                m.addChartPoint(new Point(x.doubleValue() + Math.random() * 0.1, y.doubleValue() + Math.random() * 0.1), yaw + Math.random(), h + Math.random() * 0.5);
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
         }
     }
 
@@ -1178,5 +1342,96 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         }
     }
+
+    class ScatterSeries implements XYSeries {
+        private ArrayList<Point> points;
+        private String title;
+
+        ScatterSeries(ArrayList<Point> points, String title) {
+            this.points = points;
+            this.title = title;
+        }
+
+        @Override
+        public String getTitle() {
+            return title;
+        }
+
+        @Override
+        public int size() {
+            return points.size();
+        }
+
+        @Override
+        public Number getX(int index) {
+            return points.get(index).x;
+        }
+
+        @Override
+        public Number getY(int index) {
+            return points.get(index).y;
+        }
+    }
+
+    class DroneIcon implements XYSeries {
+        public SimpleXYSeries droneIconHead;
+        private ArrayList<Point> iconPoints;
+        private String title;
+        private Point pos;
+        private double lineLength = 5;
+        private double yaw = 0;
+
+        DroneIcon(String title) {
+            this.title = title;
+            iconPoints = new ArrayList<Point>();
+            initIcon();
+        }
+
+        public void initIcon() {
+            pos = new Point();
+            droneIconHead = new SimpleXYSeries("");
+        }
+
+        public void updateIcon(Point point, double yaw) {
+            iconPoints.clear();
+
+            this.yaw = yaw;
+            double radians = Math.toRadians(this.yaw);
+            double sina = Math.sin(radians) * lineLength;
+            double cosa = Math.cos(radians) * lineLength;
+
+            pos = point;
+            Point head = new Point(pos.x.doubleValue() + cosa, pos.y.doubleValue() + sina);
+            iconPoints.add(head);
+            droneIconHead.clear();
+            droneIconHead.addFirst(head.x, head.y);
+            iconPoints.add(new Point(pos.x.doubleValue() - cosa, pos.y.doubleValue() - sina));
+            iconPoints.add(new Point(pos.x.doubleValue(), pos.y.doubleValue()));
+            iconPoints.add(new Point(pos.x.doubleValue() + sina, pos.y.doubleValue() - cosa));
+            iconPoints.add(new Point(pos.x.doubleValue() - sina, pos.y.doubleValue() + cosa));
+        }
+
+        @Override
+        public String getTitle() {
+            return title;
+        }
+
+        @Override
+        public int size() {
+            return iconPoints.size();
+        }
+
+        @Override
+        public Number getX(int index) {
+            return iconPoints.get(index).x;
+        }
+
+        @Override
+        public Number getY(int index) {
+            return iconPoints.get(index).y;
+        }
+    }
+
+
 
 }

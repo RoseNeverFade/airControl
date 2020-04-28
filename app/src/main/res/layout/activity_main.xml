@@ -1,67 +1,148 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    tools:context=".MainActivity">
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                                                   xmlns:app="http://schemas.android.com/apk/res-auto"
+                                                   xmlns:ap="http://schemas.android.com/apk/res-auto"
+                                                   xmlns:tools="http://schemas.android.com/tools"
+                                                   android:layout_width="match_parent"
+                                                   android:layout_height="match_parent"
+                                                   android:orientation="vertical"
+                                                   android:id="@+id/main_body"
+                                                   tools:context=".MainActivity">
 
+    <androidx.constraintlayout.widget.ConstraintLayout
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toTopOf="@id/bottom_bar"
+            app:layout_constraintStart_toEndOf="@id/left_bar"
+            app:layout_constraintEnd_toStartOf="@id/right_bar"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+    >
+        <TextView
+                android:id="@+id/missininfo"
+                android:layout_width="450dp"
+                android:layout_height="80dp"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+        />
+        <androidx.constraintlayout.widget.ConstraintLayout
+                app:layout_constraintTop_toBottomOf="@id/missininfo"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                app:layout_constraintDimensionRatio="1:1"
+                android:id="@+id/route_div">
+            <com.androidplot.xy.XYPlot
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    style="@style/APDefacto.Light"
+                    android:id="@+id/route_plot"
+                    android:layout_width="fill_parent"
+                    android:layout_height="fill_parent"
+                    ap:gridInsetBottom="-10dp"
+                    ap:lineLabelInsetBottom="-20dp"
+                    ap:lineLabelTextSizeBottom="10dp"
+                    ap:lineLabelTextSizeLeft="10dp"
+                    ap:lineLabels="left|bottom"
+                    ap:title="轨迹图"
+                    ap:rangeTitle="y"
+                    ap:domainTitle="x"/>
+        </androidx.constraintlayout.widget.ConstraintLayout>
+        <androidx.constraintlayout.widget.ConstraintLayout
+                app:layout_constraintTop_toTopOf="@id/route_div"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toEndOf="@+id/route_div"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:id="@+id/height_div">
+            <com.androidplot.xy.XYPlot
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    style="@style/APDefacto.Light"
+                    android:id="@+id/height_plot"
+                    android:layout_width="fill_parent"
+                    android:layout_height="fill_parent"
+                    ap:gridInsetBottom="-10dp"
+                    ap:lineLabelInsetBottom="-20dp"
+                    ap:lineLabelTextSizeBottom="10dp"
+                    ap:lineLabelTextSizeLeft="10dp"
+                    ap:lineLabels="left|bottom"
+                    ap:title="高度图"
+                    ap:rangeTitle="y"
+                    ap:domainTitle="x"/>
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
-
-
-    <RelativeLayout
-            android:id="@+id/main_body"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent">
-
+    <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:paddingStart="0dp"
+            android:paddingEnd="16dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:id="@+id/left_bar"
+    >
         <Button
                 android:id="@+id/btn_record"
                 android:layout_width="50dp"
                 android:layout_height="50dp"
-                android:text="r"/>
+                android:text="r"
+                app:layout_constraintBottom_toTopOf="@+id/btn_output" app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="@+id/btn_output"/>
+        <Button
+                android:id="@+id/btn_output"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:text="o"
+                app:layout_constraintBottom_toTopOf="@+id/btn_load"
+                app:layout_constraintTop_toBottomOf="@+id/btn_record"
+                app:layout_constraintStart_toStartOf="@+id/btn_pic1"/>
 
         <Button
                 android:id="@+id/btn_load"
                 android:layout_width="50dp"
                 android:layout_height="50dp"
-                android:layout_marginLeft="60dp"
+                app:layout_constraintBottom_toTopOf="@+id/btn_pic1"
+                app:layout_constraintTop_toBottomOf="@+id/btn_output"
+                app:layout_constraintStart_toStartOf="@+id/btn_pic1"
                 android:text="L"/>
 
-
-        <Button
-                android:id="@+id/btn_output"
-                android:layout_width="50dp"
-                android:layout_height="50dp"
-                android:layout_marginTop="60dp"
-                android:text="o"/>
         <Button
                 android:id="@+id/btn_pic1"
                 android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:layout_marginTop="120dp"
-            android:text="a" />
+                android:layout_height="50dp"
+                android:text="a" app:layout_constraintTop_toBottomOf="@+id/btn_load"
+                app:layout_constraintBottom_toTopOf="@+id/btn_pic2"
+                app:layout_constraintStart_toStartOf="@+id/btn_pic2"/>
         <Button
-            android:id="@+id/btn_pic2"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
-            android:layout_marginTop="180dp"
-            android:text="b" />
-        <Button
-                android:id="@+id/btn_data"
+                android:id="@+id/btn_pic2"
                 android:layout_width="50dp"
                 android:layout_height="50dp"
-                android:layout_marginTop="240dp"
-                android:text="c"/>
-
+                android:text="b" app:layout_constraintTop_toBottomOf="@+id/btn_pic1"
+                app:layout_constraintBottom_toTopOf="@+id/btn_pic3"
+                app:layout_constraintStart_toStartOf="@+id/btn_pic3"/>
         <Button
-                android:id="@+id/btn_cserver"
+                android:id="@+id/btn_pic3"
                 android:layout_width="50dp"
                 android:layout_height="50dp"
-                android:onClick="onClick"
-                android:layout_alignParentRight="true"
-                android:layout_marginRight="70dp"
-                android:text="s"/>
-
+                android:text="c"
+                app:layout_constraintLeft_toLeftOf="parent"
+                android:layout_marginLeft="10dp"
+                app:layout_constraintTop_toBottomOf="@+id/btn_pic2"
+                app:layout_constraintBottom_toBottomOf="parent"/>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+    <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:paddingStart="16dp"
+            android:paddingEnd="0dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:id="@+id/right_bar"
+    >
         <Button
                 android:id="@+id/btn_stop"
                 android:layout_width="50dp"
@@ -69,19 +150,30 @@
                 android:onClick="onClick"
                 android:layout_alignParentRight="true"
                 android:layout_marginRight="70dp"
-                android:layout_marginTop="60dp"
                 android:text="q"
-                android:visibility="gone"/>
+                android:visibility="gone" tools:ignore="MissingConstraints"/>
 
 
+        <Button
+                android:id="@+id/btn_cserver"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:onClick="onClick"
+                android:layout_alignParentRight="true"
+                android:layout_marginEnd="10dp"
+                android:text="s" app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toTopOf="@+id/btn_team"
+                app:layout_constraintEnd_toEndOf="parent"
+        />
         <Button
                 android:id="@+id/btn_team"
                 android:layout_width="50dp"
                 android:layout_height="50dp"
                 android:onClick="onClick"
                 android:layout_alignParentRight="true"
-                android:layout_marginRight="10dp"
-                android:text="t"/>
+                android:text="t" app:layout_constraintTop_toBottomOf="@+id/btn_cserver"
+                app:layout_constraintBottom_toTopOf="@+id/btn_waypoint"
+                app:layout_constraintEnd_toEndOf="@+id/btn_cserver"/>
 
         <Button
                 android:id="@+id/btn_waypoint"
@@ -89,149 +181,150 @@
                 android:layout_height="50dp"
                 android:onClick="onClick"
                 android:layout_alignParentRight="true"
-                android:layout_marginRight="10dp"
-                android:layout_marginTop="60dp"
-                android:text="w"/>
+                android:text="w" app:layout_constraintTop_toBottomOf="@+id/btn_team"
+                app:layout_constraintBottom_toTopOf="@+id/btn_hotpoint"
+                app:layout_constraintEnd_toEndOf="@+id/btn_team"/>
 
         <Button
                 android:id="@+id/btn_hotpoint"
                 android:layout_width="50dp"
                 android:layout_height="50dp"
                 android:onClick="onClick"
-                android:layout_marginTop="120dp"
                 android:layout_alignParentRight="true"
-                android:layout_marginRight="10dp"
-                android:text="h"/>
+                android:text="h" app:layout_constraintTop_toBottomOf="@+id/btn_waypoint"
+                app:layout_constraintBottom_toTopOf="@+id/btn_rotate"
+                app:layout_constraintEnd_toEndOf="@+id/btn_waypoint"/>
 
         <Button
                 android:id="@+id/btn_rotate"
                 android:layout_width="50dp"
                 android:layout_height="50dp"
                 android:onClick="onClick"
-                android:layout_marginTop="180dp"
                 android:layout_alignParentRight="true"
-                android:layout_marginRight="10dp"
-                android:text="ro"/>
+                android:text="ro" app:layout_constraintTop_toBottomOf="@+id/btn_hotpoint"
+                app:layout_constraintBottom_toTopOf="@+id/btn_autorotate"
+                app:layout_constraintEnd_toEndOf="@+id/btn_hotpoint"/>
 
         <Button
                 android:id="@+id/btn_autorotate"
                 android:layout_width="50dp"
                 android:layout_height="50dp"
                 android:onClick="onClick"
-                android:layout_marginTop="240dp"
                 android:layout_alignParentRight="true"
-                android:layout_marginRight="10dp"
-                android:text="ar"/>
-
+                android:text="ar" app:layout_constraintTop_toBottomOf="@+id/btn_rotate"
+                app:layout_constraintBottom_toBottomOf="parent" app:layout_constraintEnd_toEndOf="@+id/btn_rotate"/>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+    <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:layout_constraintStart_toEndOf="@id/left_bar"
+            app:layout_constraintEnd_toStartOf="@id/right_bar"
+            app:layout_constraintBottom_toBottomOf="parent"
+            android:id="@+id/bottom_bar"
+    >
         <TextView
                 android:id="@+id/textTLng"
                 android:layout_width="90dp"
                 android:layout_height="30dp"
-                android:layout_marginLeft="90dp"
-                android:layout_marginTop="290dp"
                 android:text="经度"
-                android:textAlignment="center"/>
-        <TextView
-                android:id="@+id/textTLat"
-                android:layout_width="90dp"
-                android:layout_height="30dp"
-                android:layout_marginLeft="270dp"
-                android:layout_marginTop="290dp"
-                android:text="纬度"
-                android:textAlignment="center" />
-        <TextView
-                android:id="@+id/textTAlt"
-                android:layout_width="90dp"
-                android:layout_height="30dp"
-                android:layout_marginLeft="450dp"
-                android:layout_marginTop="290dp"
-                android:text="高度"
-                android:textAlignment="center" />
-        <TextView
-                android:id="@+id/textTPitch"
-                android:layout_width="90dp"
-                android:layout_height="30dp"
-                android:layout_marginLeft="90dp"
-                android:layout_marginTop="320dp"
-                android:layout_marginBottom="20dp"
-                android:text="俯仰角"
-                android:textAlignment="center" />
-        <TextView
-                android:id="@+id/textTRoll"
-                android:layout_width="90dp"
-                android:layout_height="30dp"
-                android:layout_marginLeft="270dp"
-                android:layout_marginTop="320dp"
-                android:text="横滚角"
-                android:textAlignment="center" />
-
-        <TextView
-                android:id="@+id/textTYaw"
-                android:layout_width="90dp"
-                android:layout_height="30dp"
-                android:layout_marginLeft="450dp"
-                android:layout_marginTop="320dp"
-                android:text="偏航角"
-                android:textAlignment="center" />
-
+                app:layout_constraintTop_toTopOf="parent"
+                android:textAlignment="center" app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintHorizontal_bias="0.5" app:layout_constraintEnd_toStartOf="@+id/textLng"/>
         <TextView
                 android:id="@+id/textLng"
                 android:layout_width="90dp"
                 android:layout_height="30dp"
-                android:layout_marginLeft="180dp"
-                android:layout_marginTop="290dp"
                 android:text="经度"
-                android:textAlignment="center" />
+                android:textAlignment="center" app:layout_constraintStart_toEndOf="@+id/textTLng"
+                app:layout_constraintHorizontal_bias="0.5" app:layout_constraintEnd_toStartOf="@+id/textTLat"
+                app:layout_constraintTop_toTopOf="@+id/textTLng"/>
+        <TextView
+                android:id="@+id/textTLat"
+                android:layout_width="90dp"
+                android:layout_height="30dp"
+                android:text="纬度"
+                android:textAlignment="center" app:layout_constraintStart_toEndOf="@+id/textLng"
+                app:layout_constraintHorizontal_bias="0.5" app:layout_constraintEnd_toStartOf="@+id/textLat"
+                app:layout_constraintTop_toTopOf="@+id/textLng"/>
         <TextView
                 android:id="@+id/textLat"
                 android:layout_width="90dp"
                 android:layout_height="30dp"
-                android:layout_marginLeft="360dp"
-                android:layout_marginTop="290dp"
                 android:text="纬度"
-                android:textAlignment="center" />
+                android:textAlignment="center" app:layout_constraintStart_toEndOf="@+id/textTLat"
+                app:layout_constraintHorizontal_bias="0.5" app:layout_constraintEnd_toStartOf="@+id/textTAlt"
+                app:layout_constraintTop_toTopOf="@+id/textTLat"/>
+        <TextView
+                android:id="@+id/textTAlt"
+                android:layout_width="90dp"
+                android:layout_height="30dp"
+                android:text="高度"
+                android:textAlignment="center" app:layout_constraintStart_toEndOf="@+id/textLat"
+                app:layout_constraintHorizontal_bias="0.5" app:layout_constraintEnd_toStartOf="@+id/textAlt"
+                app:layout_constraintTop_toTopOf="@+id/textLat"/>
         <TextView
                 android:id="@+id/textAlt"
                 android:layout_width="90dp"
                 android:layout_height="30dp"
-                android:layout_marginLeft="540dp"
-                android:layout_marginTop="290dp"
                 android:text="高度"
-                android:textAlignment="center" />
+                android:textAlignment="center" app:layout_constraintStart_toEndOf="@+id/textTAlt"
+                app:layout_constraintHorizontal_bias="0.5" app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="@+id/textTAlt"/>
+        <TextView
+                android:id="@+id/textTPitch"
+                android:layout_width="90dp"
+                android:layout_height="30dp"
+                android:text="俯仰角"
+                android:textAlignment="center" app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/textTLng"
+                app:layout_constraintHorizontal_bias="0.5" app:layout_constraintEnd_toStartOf="@+id/textPitch"/>
         <TextView
                 android:id="@+id/textPitch"
                 android:layout_width="90dp"
                 android:layout_height="30dp"
-                android:layout_marginLeft="180dp"
-                android:layout_marginTop="320dp"
                 android:text="俯仰角"
-                android:textAlignment="center" />
+                android:textAlignment="center" app:layout_constraintStart_toEndOf="@+id/textTPitch"
+                app:layout_constraintHorizontal_bias="0.5" app:layout_constraintEnd_toStartOf="@+id/textTRoll"
+                app:layout_constraintTop_toTopOf="@+id/textTPitch"/>
+        <TextView
+                android:id="@+id/textTRoll"
+                android:layout_width="90dp"
+                android:layout_height="30dp"
+                android:text="横滚角"
+                android:textAlignment="center" app:layout_constraintStart_toEndOf="@+id/textPitch"
+                app:layout_constraintHorizontal_bias="0.5" app:layout_constraintEnd_toStartOf="@+id/textRoll"
+                app:layout_constraintTop_toTopOf="@+id/textPitch"/>
+
         <TextView
                 android:id="@+id/textRoll"
                 android:layout_width="90dp"
                 android:layout_height="30dp"
-                android:layout_marginLeft="360dp"
-                android:layout_marginTop="320dp"
                 android:text="横滚角"
-                android:textAlignment="center"/>
+                android:textAlignment="center" app:layout_constraintStart_toEndOf="@+id/textTRoll"
+                app:layout_constraintHorizontal_bias="0.5" app:layout_constraintEnd_toStartOf="@+id/textTYaw"
+                app:layout_constraintTop_toTopOf="@+id/textTRoll"/>
+        <TextView
+                android:id="@+id/textTYaw"
+                android:layout_width="90dp"
+                android:layout_height="30dp"
+                android:text="偏航角"
+                android:textAlignment="center" app:layout_constraintStart_toEndOf="@+id/textRoll"
+                app:layout_constraintHorizontal_bias="0.5" app:layout_constraintEnd_toStartOf="@+id/textYaw"
+                app:layout_constraintTop_toTopOf="@+id/textRoll"/>
+
         <TextView
                 android:id="@+id/textYaw"
                 android:layout_width="90dp"
                 android:layout_height="30dp"
-                android:layout_marginLeft="540dp"
-                android:layout_marginTop="320dp"
                 android:text="偏航角"
-                android:textAlignment="center"/>
-
-        <TextView
-                android:id="@+id/missininfo"
-                android:layout_width="450dp"
-                android:layout_height="80dp"
-                android:layout_marginLeft="120dp"/>
+                android:textAlignment="center" app:layout_constraintStart_toEndOf="@+id/textTYaw"
+                app:layout_constraintHorizontal_bias="0.5" app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="@+id/textTYaw"/>
 
 
-    </RelativeLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
-</LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
 
 
