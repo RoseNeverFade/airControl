@@ -21,8 +21,8 @@ public class DroneData {
     private String dataDir;
     private int lineNum;
     private ArrayList<Date> gpsTime;
-    private ArrayList<Double> gpsLng;
-    private ArrayList<Double> gpsLat;
+    private ArrayList<Double> gpsLng;   //经度
+    private ArrayList<Double> gpsLat;   //纬度
     private ArrayList<Double> gpsAlt;
     private ArrayList<Double> gpsYaw;   //偏航角
     private ArrayList<Double> gpsPitch; //俯仰角

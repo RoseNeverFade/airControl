@@ -16,6 +16,7 @@ import com.androidplot.util.PixelUtils;
 import com.androidplot.xy.*;
 
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.Observable;
 import java.util.Observer;
 
@@ -25,7 +26,7 @@ public class Charts1Activity extends AppCompatActivity {
     SampleDynamicXYDatasource data;
     SampleDynamicSeries drone1Series;
     ScatterSeries drone1Scatters;
-    ScatterTop scatterTop;
+    DroneIcon droneIcon;
     private XYPlot dynamicPlot;
     private XYPlot scatterPlot;
     private MyPlotUpdater plotUpdater;
@@ -110,10 +111,10 @@ public class Charts1Activity extends AppCompatActivity {
 
         int upperBoundary = DroneData.calcMax(droneData.getGpsAlt()).intValue() + 1;
 
-        int xMax = DroneData.calcMax(droneData.getGpsLat()).intValue() + 1;
-        int xMin = DroneData.calcMin(droneData.getGpsLat()).intValue() - 1;
-        int yMax = DroneData.calcMax(droneData.getGpsLng()).intValue() + 1;
-        int yMin = DroneData.calcMin(droneData.getGpsLng()).intValue() - 1;
+        int yMax = DroneData.calcMax(droneData.getGpsLat()).intValue() + 1;
+        int yMin = DroneData.calcMin(droneData.getGpsLat()).intValue() - 1;
+        int xMax = DroneData.calcMax(droneData.getGpsLng()).intValue() + 1;
+        int xMin = DroneData.calcMin(droneData.getGpsLng()).intValue() - 1;
 
         //int lowerBoundary =DroneData.calcMin(droneData.getGpsAlt()).intValue()- 1;
 
@@ -135,8 +136,19 @@ public class Charts1Activity extends AppCompatActivity {
         //dynamicPlot.setRangeBoundaries(0, 20, BoundaryMode.FIXED);
 
 
-        scatterPlot.setDomainBoundaries(xMin, xMax, BoundaryMode.FIXED);
-        scatterPlot.setRangeBoundaries(yMin, yMax, BoundaryMode.FIXED);
+        double squareLen = Math.max(xMax - xMin, yMax - yMin);
+//        scatterPlot.setDomainStepMode(StepMode.INCREMENT_BY_FIT);
+////        scatterPlot.setDomainStepValue(40);//TODO:
+//        scatterPlot.setRangeStepMode(StepMode.INCREMENT_BY_FIT);
+////        scatterPlot.setRangeStepValue(40);
+//
+//
+//        scatterPlot.setRangeStepMode(StepMode.INCREMENT_BY_VAL);
+//        scatterPlot.setDomainStepValue(5);
+        scatterPlot.setDomainBoundaries(xMin, xMin + squareLen, BoundaryMode.FIXED);
+        scatterPlot.setRangeBoundaries(yMin, yMin + squareLen, BoundaryMode.FIXED);
+//        scatterPlot.setDomainBoundaries(null, null, BoundaryMode.GROW);
+//        scatterPlot.setRangeBoundaries(null, null, BoundaryMode.GROW);
 
 
         // create a dash effect for domain and range grid lines:
@@ -144,6 +156,9 @@ public class Charts1Activity extends AppCompatActivity {
                 new float[]{PixelUtils.dpToPix(3), PixelUtils.dpToPix(3)}, 0);
         dynamicPlot.getGraph().getDomainGridLinePaint().setPathEffect(dashFx);
         dynamicPlot.getGraph().getRangeGridLinePaint().setPathEffect(dashFx);
+
+        scatterPlot.getGraph().getLineLabelStyle(XYGraphWidget.Edge.LEFT).setFormat(new DecimalFormat("0.0"));
+        scatterPlot.getGraph().getLineLabelStyle(XYGraphWidget.Edge.BOTTOM).setFormat(new DecimalFormat("0.0"));
     }
 
     private void dataInit() {
@@ -172,19 +187,27 @@ public class Charts1Activity extends AppCompatActivity {
         // hook up the plotUpdater to the data model:
 
 
-        //===============Scatter Plot===============
+        //===============Scatter Plot===============25
         scatterPlot.clear();
 
         drone1Scatters = new ScatterSeries(data, 0, "Drone 1");
         LineAndPointFormatter formatter2 =
                 new LineAndPointFormatter(this, R.xml.point_formatter);
+        formatter2.setLegendIconEnabled(false);
         scatterPlot.addSeries(drone1Scatters, formatter2);
 
-        //===============Scatter Top================
-        scatterTop = new ScatterTop(data, 0, "Drone 1");
-        LineAndPointFormatter formatter_top =
+        //===============Drone Icon================
+        droneIcon = new DroneIcon(data, 0, "Drone 1");
+        LineAndPointFormatter iconFormatter =
                 new LineAndPointFormatter(this, R.xml.point_formatter_2);
-        scatterPlot.addSeries(scatterTop, formatter_top);
+        iconFormatter.setLegendIconEnabled(false);
+        scatterPlot.addSeries(droneIcon, iconFormatter);
+
+        //===============Drone Icon Head================
+        LineAndPointFormatter headFormatter =
+                new LineAndPointFormatter(this, R.xml.point_formatter_3);
+        headFormatter.setLegendIconEnabled(false);
+        scatterPlot.addSeries(droneIcon.droneIconHead, headFormatter);
 
     }
 
@@ -195,8 +218,8 @@ public class Charts1Activity extends AppCompatActivity {
         text_yaw.setText(droneData.getGpsYaw().get(data.counts - 1).toString());
         text_pitch.setText(droneData.getGpsPitch().get(data.counts - 1).toString());
         text_roll.setText(droneData.getGpsRoll().get(data.counts - 1).toString());
-        text_x.setText(droneData.getGpsLat().get(data.counts - 1).toString());
-        text_y.setText(droneData.getGpsLng().get(data.counts - 1).toString());
+        text_x.setText(droneData.getGpsLng().get(data.counts - 1).toString());
+        text_y.setText(droneData.getGpsLat().get(data.counts - 1).toString());
     }
 
     public int calcRangeStep(int maxVal, int stepNum) {
@@ -269,6 +292,9 @@ public class Charts1Activity extends AppCompatActivity {
         public void update(Observable o, Object arg) {
             xyPlot.redraw();
             scatterPlot.redraw();
+            if (droneIcon != null) {
+                droneIcon.updateIcon();
+            }
         }
     }
 
@@ -333,22 +359,22 @@ public class Charts1Activity extends AppCompatActivity {
             if (index >= counts) {
                 throw new IllegalArgumentException();
             }
-            return droneData.getGpsLat().get(index); //TODO:
+            return droneData.getGpsLng().get(index); //TODO:
         }
 
         Number getY(int series, int index) {
             if (index >= counts) {
                 throw new IllegalArgumentException();
             }
-            return droneData.getGpsLng().get(index);//TODO:
+            return droneData.getGpsLat().get(index);//TODO:
         }
 
         Number getTopX(int series) {
-            return droneData.getGpsLat().get(counts - 1); //TODO:
+            return droneData.getGpsLng().get(counts - 1); //TODO:
         }
 
         Number getTopY(int series) {
-            return droneData.getGpsLng().get(counts - 1); //TODO:
+            return droneData.getGpsLat().get(counts - 1); //TODO:
         }
 
 
@@ -456,15 +482,86 @@ public class Charts1Activity extends AppCompatActivity {
         }
     }
 
-    class ScatterTop implements XYSeries {
+    class DroneIcon implements XYSeries {
         private SampleDynamicXYDatasource datasource;
         private int seriesIndex;
+        public DroneIconHead droneIconHead;
+        private ArrayList<Point> iconPoints;
         private String title;
+        private Point pos;
+        private double lineLength = 10;
+        private double yaw = 0;
 
-        ScatterTop(SampleDynamicXYDatasource datasource, int seriesIndex, String title) {
+        DroneIcon(SampleDynamicXYDatasource datasource, int seriesIndex, String title) {
             this.datasource = datasource;
             this.seriesIndex = seriesIndex;
             this.title = title;
+            iconPoints = new ArrayList<Point>();
+            initIcon();
+        }
+
+        public void initIcon() {
+            pos = new Point(droneData.getGpsLng().get(0), droneData.getGpsLat().get(0));
+            droneIconHead = new DroneIconHead(pos);
+            for (int i = 0; i < 5; i++) {
+                iconPoints.add(pos);
+            }
+        }
+
+        public void updateIcon() {
+            iconPoints.clear();
+
+            this.yaw = droneData.getGpsYaw().get(data.counts - 1);
+            double radians = Math.toRadians(this.yaw);
+            double sina = Math.sin(radians) * lineLength;
+            double cosa = Math.cos(radians) * lineLength;
+
+            pos = new Point(datasource.getTopX(seriesIndex), datasource.getTopY(seriesIndex));
+            Point head = new Point(pos.x.doubleValue() + cosa, pos.y.doubleValue() + sina);
+            iconPoints.add(head);
+            droneIconHead.updatePos(head);
+            iconPoints.add(new Point(pos.x.doubleValue() - cosa, pos.y.doubleValue() - sina));
+            iconPoints.add(new Point(pos.x.doubleValue(), pos.y.doubleValue()));
+            iconPoints.add(new Point(pos.x.doubleValue() + sina, pos.y.doubleValue() - cosa));
+            iconPoints.add(new Point(pos.x.doubleValue() - sina, pos.y.doubleValue() + cosa));
+        }
+
+        @Override
+        public String getTitle() {
+            return title;
+        }
+
+        @Override
+        public int size() {
+            return 5;
+        }
+
+        @Override
+        public Number getX(int index) {
+            return iconPoints.get(index).x;
+        }
+
+        @Override
+        public Number getY(int index) {
+            return iconPoints.get(index).y;
+        }
+    }
+
+    class DroneIconHead implements XYSeries {
+        private Point pos;
+        private String title;
+
+        DroneIconHead(Point pos) {
+            this(pos, "");
+        }
+
+        DroneIconHead(Point pos, String title) {
+            this.pos = pos;
+            this.title = title;
+        }
+
+        public void updatePos(Point point) {
+            this.pos = point;
         }
 
         @Override
@@ -479,12 +576,13 @@ public class Charts1Activity extends AppCompatActivity {
 
         @Override
         public Number getX(int index) {
-            return datasource.getTopX(seriesIndex);
+            return pos.x;
         }
 
         @Override
         public Number getY(int index) {
-            return datasource.getTopY(seriesIndex);
+            return pos.y;
         }
     }
 }
+
