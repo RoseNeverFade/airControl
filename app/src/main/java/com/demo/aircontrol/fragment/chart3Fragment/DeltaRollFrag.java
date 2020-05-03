@@ -11,7 +11,7 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import com.demo.aircontrol.DroneData;
 import com.demo.aircontrol.R;
-import com.demo.aircontrol.ui.util.ChartsMarkerView;
+import com.demo.aircontrol.util.ui.ChartsMarkerView;
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;

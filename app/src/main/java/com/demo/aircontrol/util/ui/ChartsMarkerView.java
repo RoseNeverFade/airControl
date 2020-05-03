@@ -1,4 +1,4 @@
-package com.demo.aircontrol.ui.util;
+package com.demo.aircontrol.util.ui;
 
 import android.annotation.SuppressLint;
 import android.content.Context;

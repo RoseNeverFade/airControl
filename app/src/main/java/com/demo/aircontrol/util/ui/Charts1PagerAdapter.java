@@ -1,4 +1,4 @@
-package com.demo.aircontrol.ui.util;
+package com.demo.aircontrol.util.ui;
 
 import android.content.Context;
 import androidx.annotation.Nullable;
@@ -7,19 +7,22 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentPagerAdapter;
 import com.demo.aircontrol.R;
-import com.demo.aircontrol.fragment.AttitudeFrag;
+import com.demo.aircontrol.fragment.AltFrag;
+import com.demo.aircontrol.fragment.LatFrag;
+import com.demo.aircontrol.fragment.LngFrag;
+import com.demo.aircontrol.fragment.RoadMapFrag;
 
 /**
  * A [FragmentPagerAdapter] that returns a fragment corresponding to
  * one of the sections/tabs/pages.
  */
-public class Charts2PagerAdapter extends FragmentPagerAdapter {
+public class Charts1PagerAdapter extends FragmentPagerAdapter {
 
     @StringRes
-    private static final int[] TAB_TITLES = new int[]{R.string.tab_text_5};
+    private static final int[] TAB_TITLES = new int[]{R.string.tab_text_1, R.string.tab_text_2, R.string.tab_text_3, R.string.tab_text_4};
     private final Context mContext;
 
-    public Charts2PagerAdapter(Context context, FragmentManager fm) {
+    public Charts1PagerAdapter(Context context, FragmentManager fm) {
         super(fm);
         mContext = context;
     }
@@ -28,8 +31,15 @@ public class Charts2PagerAdapter extends FragmentPagerAdapter {
     public Fragment getItem(int position) {
         // getItem is called to instantiate the fragment for the given page.
         // Return a PlaceholderFragment (defined as a static inner class below).
-        return AttitudeFrag.newInstance();
-
+        if (position == 0) {
+            return LngFrag.newInstance();
+        } else if (position == 1) {
+            return LatFrag.newInstance();
+        } else if (position == 2) {
+            return AltFrag.newInstance();
+        } else {
+            return RoadMapFrag.newInstance();
+        }
     }
 
     @Nullable
@@ -40,6 +50,6 @@ public class Charts2PagerAdapter extends FragmentPagerAdapter {
 
     @Override
     public int getCount() {
-        return 1;
+        return 4;
     }
 }

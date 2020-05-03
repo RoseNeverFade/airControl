@@ -1,4 +1,4 @@
-package com.demo.aircontrol;
+package com.demo.aircontrol.util.model;
 
 import android.opengl.GLES20;
 
@@ -7,7 +7,7 @@ import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
 
-public class Model {
+public class Triangle {
 
     // number of coordinates per vertex in this array
     static final int COORDS_PER_VERTEX = 3;
@@ -77,9 +77,7 @@ public class Model {
     // Use to access and set the view transformation
     private int vPMatrixHandle;
 
-    public Model() {
-
-
+    public Triangle() {
         // initialize vertex byte buffer for shape coordinates
         ByteBuffer bb = ByteBuffer.allocateDirect(
                 // (number of coordinate values * 4 bytes per float)

@@ -1,4 +1,4 @@
-package com.demo.aircontrol;
+package com.demo.aircontrol.util.model;
 
 import android.content.Context;
 import android.opengl.GLSurfaceView;
@@ -34,5 +34,8 @@ public class MyGLSurfaceView extends GLSurfaceView {
         setRenderer(renderer);
     }
 
+    public void rotate(double roll, double pitch, double yaw) {
+        renderer.rotate(roll, pitch, yaw);
+    }
 
 }

@@ -1,4 +1,4 @@
-package com.demo.aircontrol;
+package com.demo.aircontrol.util.model;
 
 import android.content.res.Resources;
 import android.text.TextUtils;

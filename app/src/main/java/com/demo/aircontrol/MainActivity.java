@@ -14,8 +14,10 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.*;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import com.androidplot.util.PixelUtils;
 import com.androidplot.xy.*;
+import com.demo.aircontrol.util.model.MyGLSurfaceView;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -39,6 +41,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     ArrayList<Point> roundPoints;
     boolean testStart = false;
     private XYPlot heightPlot;
+    private MyGLSurfaceView gLView;
 
 
     //显示信息
@@ -56,8 +59,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Button btnDemOutput;//输出经纬数据至文件
 
     private static final int FILE_SELECT_CODE = 0;
-    private Button btnPic1; //Button A
-    private Button btnPic2; //Button A
+    private Button btnHistory; //Button ...
+    private Button btnHistoryRoute; //Button A
+    private Button btnHistoryAnalyze; //Button C
     private XYPlot routePlot;
 
     private TextView missioninfo;
@@ -72,6 +76,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private PopupWindow popupWindowJointeam;
     private PopupWindow popupWindowRotate;
     private PopupWindow popupWindowAutorotate;
+    private PopupWindow popupWindowHistory;
 
     private Calendar now = Calendar.getInstance();
 
@@ -253,6 +258,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        //3d model
+        ConstraintLayout layout = findViewById(R.id.modelBlock);
+        gLView = new MyGLSurfaceView(this);
+        layout.addView(gLView);
 
         droneData = droneData.getInstance();
         droneData.setContext(this);
@@ -321,6 +330,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 initPopupWindowConfirm(1);
                 popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
                 break;
+
+            case R.id.btn_history:
+                initPopupWindowHistory();
+                popupWindowHistory.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                break;
         }
     }
 
@@ -352,42 +366,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         btnDemOutput = (Button) findViewById(R.id.btn_output);
         btnDemOutput.setOnClickListener(this);//输出经纬数据至文件
 
-
-        btnLoad = (Button) findViewById(R.id.btn_load);
-        btnLoad.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                showFileChooser();
-            }
-        });
-
-        btnPic1 = (Button) findViewById(R.id.btn_pic1);
-        btnPic1.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(MainActivity.this, Charts1Activity.class);
-                startActivity(intent);
-            }
-        });
-
-
-        btnPic2 = (Button) findViewById(R.id.btn_pic2);
-        btnPic2.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(MainActivity.this, Charts2Activity.class);
-                startActivity(intent);
-            }
-        });
-
-        btnPic3 = (Button) findViewById(R.id.btn_pic3);
-        btnPic3.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(MainActivity.this, Charts3Activity.class);
-                startActivity(intent);
-            }
-        });
+        btnHistory = (Button) findViewById(R.id.btn_history);
+        btnHistory.setOnClickListener(this);
 
 
         btteam = (Button) findViewById(R.id.btn_team);
@@ -486,6 +466,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         heightSeries.setModel(Arrays.asList(
                 new Number[]{height}),
                 SimpleXYSeries.ArrayFormat.Y_VALS_ONLY);
+
+        heightPlot.setRangeBoundaries(0, ((int) height / 5 + 1) * 5, BoundaryMode.FIXED);
         heightPlot.redraw();
     }
 
@@ -1328,6 +1310,70 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         });
 
+    }
+
+    protected void initPopupWindowHistory() {
+        /* TODO Auto-generated method stub */
+
+        /* 获取自定义布局文件pop.xml的视图 */
+        View popupWindow_view = getLayoutInflater().inflate(R.layout.pop_history, null,
+                false);
+        /* 创建PopupWindow实例,200,150分别是宽度和高度 */
+        popupWindowHistory = new PopupWindow(popupWindow_view, 500, 800, true);
+
+        popupWindowHistory.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
+        popupWindowHistory.setBackgroundDrawable(new BitmapDrawable());
+
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.alpha = 0.5f;//设置阴影透明度
+        getWindow().setAttributes(lp);
+        popupWindowHistory.setOnDismissListener(new PopupWindow.OnDismissListener() {
+
+            @Override
+            public void onDismiss() {
+                WindowManager.LayoutParams lp = getWindow().getAttributes();
+                lp.alpha = 1f;
+                getWindow().setAttributes(lp);
+            }
+        });
+
+        /* pop.xml视图里面的控件 */
+        Button btnLoad = (Button) popupWindow_view.findViewById(R.id.btn_load);
+        Button btnPic1 = (Button) popupWindow_view.findViewById(R.id.btn_hisRoute);
+        Button btnPic2 = (Button) popupWindow_view.findViewById(R.id.btn_hisAnalyze);
+
+
+        btnLoad.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showFileChooser();
+            }
+        });
+
+        btnPic1.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    Intent intent = new Intent(MainActivity.this, Charts1Activity.class);
+                    startActivity(intent);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+            }
+        });
+
+        btnPic2.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    Intent intent = new Intent(MainActivity.this, Charts3Activity.class);
+                    startActivity(intent);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
     private class ConnectRunnable implements Runnable {

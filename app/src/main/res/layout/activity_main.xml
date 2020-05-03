@@ -7,29 +7,210 @@
                                                    android:layout_height="match_parent"
                                                    android:orientation="vertical"
                                                    android:id="@+id/main_body"
-                                                   tools:context=".MainActivity">
 
+                                                   tools:context=".MainActivity">
     <androidx.constraintlayout.widget.ConstraintLayout
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toTopOf="@id/bottom_bar"
-            app:layout_constraintStart_toEndOf="@id/left_bar"
-            app:layout_constraintEnd_toStartOf="@id/right_bar"
-            android:layout_width="0dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            android:layout_width="120dp"
             android:layout_height="0dp"
-    >
-        <TextView
-                android:id="@+id/missininfo"
-                android:layout_width="450dp"
-                android:layout_height="80dp"
+            android:id="@+id/left_bar"
+            android:elevation="8dp"
+            android:background="@drawable/shadow_rectangle"
+            app:layout_constraintVertical_bias="0.0">
+        <androidx.constraintlayout.widget.ConstraintLayout
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
-        />
+                app:layout_constraintBottom_toTopOf="@id/modelBlock"
+                android:layout_width="match_parent"
+                android:paddingStart="4dp"
+                android:layout_height="0dp">
+            <TextView
+                    android:id="@+id/textTLng"
+                    android:layout_width="90dp"
+                    android:layout_height="wrap_content"
+                    android:text="经度"
+                    android:textAlignment="textStart"
+                    app:layout_constraintTop_toTopOf="parent" app:layout_constraintBottom_toTopOf="@+id/textLng"
+                    app:layout_constraintStart_toStartOf="@+id/textLng"/>
+            <TextView
+                    android:id="@+id/textLng"
+                    android:layout_width="90dp"
+                    android:layout_height="wrap_content"
+                    android:text="[经度]"
+                    android:textAlignment="textStart"
+                    app:layout_constraintTop_toBottomOf="@+id/textTLng"
+                    app:layout_constraintBottom_toTopOf="@+id/textTLat"
+                    app:layout_constraintStart_toStartOf="@+id/textTLat"/>
+            <TextView
+                    android:id="@+id/textTLat"
+                    android:layout_width="90dp"
+                    android:layout_height="wrap_content"
+                    android:text="纬度"
+                    android:textAlignment="textStart"
+                    app:layout_constraintTop_toBottomOf="@+id/textLng"
+                    app:layout_constraintBottom_toTopOf="@+id/textLat"
+                    app:layout_constraintStart_toStartOf="@+id/textLat"/>
+            <TextView
+                    android:id="@+id/textLat"
+                    android:layout_width="90dp"
+                    android:layout_height="wrap_content"
+                    android:text="[纬度]"
+                    android:textAlignment="textStart"
+                    app:layout_constraintTop_toBottomOf="@+id/textTLat"
+                    app:layout_constraintBottom_toTopOf="@+id/textTAlt"
+                    app:layout_constraintStart_toStartOf="@+id/textTAlt"/>
+            <TextView
+                    android:id="@+id/textTAlt"
+                    android:layout_width="90dp"
+                    android:layout_height="wrap_content"
+                    android:text="高度"
+                    android:textAlignment="textStart"
+                    app:layout_constraintTop_toBottomOf="@+id/textLat"
+                    app:layout_constraintBottom_toTopOf="@+id/textAlt"
+                    app:layout_constraintStart_toStartOf="@+id/textAlt"/>
+            <TextView
+                    android:id="@+id/textAlt"
+                    android:layout_width="90dp"
+                    android:layout_height="wrap_content"
+                    android:text="[高度]"
+                    android:textAlignment="textStart"
+                    app:layout_constraintTop_toBottomOf="@+id/textTAlt"
+                    app:layout_constraintBottom_toTopOf="@+id/textTPitch"
+                    app:layout_constraintStart_toStartOf="@+id/textTPitch"/>
+            <TextView
+                    android:id="@+id/textTPitch"
+                    android:layout_width="90dp"
+                    android:layout_height="wrap_content"
+                    android:text="俯仰角"
+                    android:textAlignment="textStart"
+                    app:layout_constraintTop_toBottomOf="@+id/textAlt"
+                    app:layout_constraintBottom_toTopOf="@+id/textPitch"
+                    app:layout_constraintStart_toStartOf="@+id/textPitch"/>
+            <TextView
+                    android:id="@+id/textPitch"
+                    android:layout_width="90dp"
+                    android:layout_height="wrap_content"
+                    android:text="[俯仰角]"
+                    android:textAlignment="textStart"
+                    app:layout_constraintTop_toBottomOf="@+id/textTPitch"
+                    app:layout_constraintBottom_toTopOf="@+id/textTRoll"
+                    app:layout_constraintStart_toStartOf="@+id/textTRoll"/>
+            <TextView
+                    android:id="@+id/textTRoll"
+                    android:layout_width="90dp"
+                    android:layout_height="wrap_content"
+                    android:text="横滚角"
+                    android:textAlignment="textStart"
+                    app:layout_constraintTop_toBottomOf="@+id/textPitch"
+                    app:layout_constraintBottom_toTopOf="@+id/textRoll"
+                    app:layout_constraintStart_toStartOf="@+id/textRoll"/>
+
+            <TextView
+                    android:id="@+id/textRoll"
+                    android:layout_width="90dp"
+                    android:layout_height="wrap_content"
+                    android:text="[横滚角]"
+                    android:textAlignment="textStart"
+                    app:layout_constraintTop_toBottomOf="@+id/textTRoll"
+                    app:layout_constraintBottom_toTopOf="@+id/textTYaw"
+                    app:layout_constraintStart_toStartOf="@+id/textTYaw"/>
+            <TextView
+                    android:id="@+id/textTYaw"
+                    android:layout_width="90dp"
+                    android:layout_height="wrap_content"
+                    android:text="偏航角"
+                    android:textAlignment="textStart"
+                    app:layout_constraintTop_toBottomOf="@+id/textRoll"
+                    app:layout_constraintBottom_toTopOf="@+id/textYaw"
+                    app:layout_constraintStart_toStartOf="@+id/textYaw"/>
+
+            <TextView
+                    android:id="@+id/textYaw"
+                    android:layout_width="90dp"
+                    android:layout_height="wrap_content"
+                    android:text="[偏航角]"
+                    android:textAlignment="textStart"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent" app:layout_constraintTop_toBottomOf="@+id/textTYaw"
+            />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
         <androidx.constraintlayout.widget.ConstraintLayout
-                app:layout_constraintTop_toBottomOf="@id/missininfo"
+                android:id="@+id/modelBlock"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:background="@color/ap_black"
+                app:layout_constraintDimensionRatio="1:1">
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+    <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/centerBlock"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/right_bar"
+            app:layout_constraintStart_toEndOf="@id/left_bar"
+            android:layout_width="0dp"
+            android:layout_height="0dp">
+        <androidx.constraintlayout.widget.ConstraintLayout
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:id="@+id/top_bar"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+        >
+            <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    android:id="@+id/button_list"
+            >
+                <Button
+                        android:id="@+id/btn_record"
+                        android:layout_width="50dp"
+                        android:layout_height="50dp"
+                        android:text="r"/>
+                <Button
+                        android:id="@+id/btn_output"
+                        android:layout_width="50dp"
+                        android:layout_height="50dp"
+                        android:text="o"/>
+
+                <Button
+                        android:id="@+id/btn_history"
+                        android:layout_width="50dp"
+                        android:layout_height="50dp"
+                        android:text="…"
+                />
+            </LinearLayout>
+            <TextView
+                    android:id="@+id/missininfo"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:text="未执行飞行任务"
+                    android:textSize="12sp"
+                    android:textAlignment="center"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintStart_toEndOf="@+id/button_list"
+                    app:layout_constraintEnd_toEndOf="parent"
+            />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+                app:layout_constraintTop_toBottomOf="@id/top_bar"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
                 android:layout_width="0dp"
                 android:layout_height="0dp"
                 app:layout_constraintDimensionRatio="1:1"
@@ -46,9 +227,12 @@
                     ap:lineLabelTextSizeBottom="10dp"
                     ap:lineLabelTextSizeLeft="10dp"
                     ap:lineLabels="left|bottom"
-                    ap:title="轨迹图"
+                    ap:backgroundColor="@color/backgroundColor"
+                    ap:graphBackgroundColor="@color/backgroundColor"
+                    ap:title=""
                     ap:rangeTitle="y"
-                    ap:domainTitle="x"/>
+                    ap:domainTitle="x"
+            />
         </androidx.constraintlayout.widget.ConstraintLayout>
         <androidx.constraintlayout.widget.ConstraintLayout
                 app:layout_constraintTop_toTopOf="@id/route_div"
@@ -65,14 +249,21 @@
                     android:id="@+id/height_plot"
                     android:layout_width="fill_parent"
                     android:layout_height="fill_parent"
+                    ap:backgroundColor="@color/backgroundColor"
+                    ap:graphBackgroundColor="@color/backgroundColor"
                     ap:gridInsetBottom="-10dp"
                     ap:lineLabelInsetBottom="-20dp"
+                    ap:gridInsetLeft="-5dp"
+                    ap:domainOriginLineColor="@color/ap_transparent"
+                    ap:domainLineColor="@color/ap_transparent"
+                    ap:rangeOriginLineThickness="0dp"
                     ap:lineLabelTextSizeBottom="10dp"
                     ap:lineLabelTextSizeLeft="10dp"
                     ap:lineLabels="left|bottom"
-                    ap:title="高度图"
-                    ap:rangeTitle="y"
-                    ap:domainTitle="x"/>
+                    ap:title=""
+                    ap:rangeTitle=""
+                    ap:domainTitle=""
+            />
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -83,61 +274,16 @@
             android:paddingEnd="16dp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            android:id="@+id/left_bar"
+            android:id="@+id/left_bar1"
     >
-        <Button
-                android:id="@+id/btn_record"
-                android:layout_width="50dp"
-                android:layout_height="50dp"
-                android:text="r"
-                app:layout_constraintBottom_toTopOf="@+id/btn_output" app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintStart_toStartOf="@+id/btn_output"/>
-        <Button
-                android:id="@+id/btn_output"
-                android:layout_width="50dp"
-                android:layout_height="50dp"
-                android:text="o"
-                app:layout_constraintBottom_toTopOf="@+id/btn_load"
-                app:layout_constraintTop_toBottomOf="@+id/btn_record"
-                app:layout_constraintStart_toStartOf="@+id/btn_pic1"/>
 
-        <Button
-                android:id="@+id/btn_load"
-                android:layout_width="50dp"
-                android:layout_height="50dp"
-                app:layout_constraintBottom_toTopOf="@+id/btn_pic1"
-                app:layout_constraintTop_toBottomOf="@+id/btn_output"
-                app:layout_constraintStart_toStartOf="@+id/btn_pic1"
-                android:text="L"/>
-
-        <Button
-                android:id="@+id/btn_pic1"
-                android:layout_width="50dp"
-                android:layout_height="50dp"
-                android:text="a" app:layout_constraintTop_toBottomOf="@+id/btn_load"
-                app:layout_constraintBottom_toTopOf="@+id/btn_pic2"
-                app:layout_constraintStart_toStartOf="@+id/btn_pic2"/>
-        <Button
-                android:id="@+id/btn_pic2"
-                android:layout_width="50dp"
-                android:layout_height="50dp"
-                android:text="b" app:layout_constraintTop_toBottomOf="@+id/btn_pic1"
-                app:layout_constraintBottom_toTopOf="@+id/btn_pic3"
-                app:layout_constraintStart_toStartOf="@+id/btn_pic3"/>
-        <Button
-                android:id="@+id/btn_pic3"
-                android:layout_width="50dp"
-                android:layout_height="50dp"
-                android:text="c"
-                app:layout_constraintLeft_toLeftOf="parent"
-                android:layout_marginLeft="10dp"
-                app:layout_constraintTop_toBottomOf="@+id/btn_pic2"
-                app:layout_constraintBottom_toBottomOf="parent"/>
     </androidx.constraintlayout.widget.ConstraintLayout>
     <androidx.constraintlayout.widget.ConstraintLayout
+            android:elevation="8dp"
+            android:background="@drawable/shadow_rectangle"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:paddingStart="16dp"
+            android:paddingStart="8dp"
             android:paddingEnd="0dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
@@ -222,104 +368,6 @@
             app:layout_constraintBottom_toBottomOf="parent"
             android:id="@+id/bottom_bar"
     >
-        <TextView
-                android:id="@+id/textTLng"
-                android:layout_width="90dp"
-                android:layout_height="30dp"
-                android:text="经度"
-                app:layout_constraintTop_toTopOf="parent"
-                android:textAlignment="center" app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintHorizontal_bias="0.5" app:layout_constraintEnd_toStartOf="@+id/textLng"/>
-        <TextView
-                android:id="@+id/textLng"
-                android:layout_width="90dp"
-                android:layout_height="30dp"
-                android:text="经度"
-                android:textAlignment="center" app:layout_constraintStart_toEndOf="@+id/textTLng"
-                app:layout_constraintHorizontal_bias="0.5" app:layout_constraintEnd_toStartOf="@+id/textTLat"
-                app:layout_constraintTop_toTopOf="@+id/textTLng"/>
-        <TextView
-                android:id="@+id/textTLat"
-                android:layout_width="90dp"
-                android:layout_height="30dp"
-                android:text="纬度"
-                android:textAlignment="center" app:layout_constraintStart_toEndOf="@+id/textLng"
-                app:layout_constraintHorizontal_bias="0.5" app:layout_constraintEnd_toStartOf="@+id/textLat"
-                app:layout_constraintTop_toTopOf="@+id/textLng"/>
-        <TextView
-                android:id="@+id/textLat"
-                android:layout_width="90dp"
-                android:layout_height="30dp"
-                android:text="纬度"
-                android:textAlignment="center" app:layout_constraintStart_toEndOf="@+id/textTLat"
-                app:layout_constraintHorizontal_bias="0.5" app:layout_constraintEnd_toStartOf="@+id/textTAlt"
-                app:layout_constraintTop_toTopOf="@+id/textTLat"/>
-        <TextView
-                android:id="@+id/textTAlt"
-                android:layout_width="90dp"
-                android:layout_height="30dp"
-                android:text="高度"
-                android:textAlignment="center" app:layout_constraintStart_toEndOf="@+id/textLat"
-                app:layout_constraintHorizontal_bias="0.5" app:layout_constraintEnd_toStartOf="@+id/textAlt"
-                app:layout_constraintTop_toTopOf="@+id/textLat"/>
-        <TextView
-                android:id="@+id/textAlt"
-                android:layout_width="90dp"
-                android:layout_height="30dp"
-                android:text="高度"
-                android:textAlignment="center" app:layout_constraintStart_toEndOf="@+id/textTAlt"
-                app:layout_constraintHorizontal_bias="0.5" app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="@+id/textTAlt"/>
-        <TextView
-                android:id="@+id/textTPitch"
-                android:layout_width="90dp"
-                android:layout_height="30dp"
-                android:text="俯仰角"
-                android:textAlignment="center" app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/textTLng"
-                app:layout_constraintHorizontal_bias="0.5" app:layout_constraintEnd_toStartOf="@+id/textPitch"/>
-        <TextView
-                android:id="@+id/textPitch"
-                android:layout_width="90dp"
-                android:layout_height="30dp"
-                android:text="俯仰角"
-                android:textAlignment="center" app:layout_constraintStart_toEndOf="@+id/textTPitch"
-                app:layout_constraintHorizontal_bias="0.5" app:layout_constraintEnd_toStartOf="@+id/textTRoll"
-                app:layout_constraintTop_toTopOf="@+id/textTPitch"/>
-        <TextView
-                android:id="@+id/textTRoll"
-                android:layout_width="90dp"
-                android:layout_height="30dp"
-                android:text="横滚角"
-                android:textAlignment="center" app:layout_constraintStart_toEndOf="@+id/textPitch"
-                app:layout_constraintHorizontal_bias="0.5" app:layout_constraintEnd_toStartOf="@+id/textRoll"
-                app:layout_constraintTop_toTopOf="@+id/textPitch"/>
-
-        <TextView
-                android:id="@+id/textRoll"
-                android:layout_width="90dp"
-                android:layout_height="30dp"
-                android:text="横滚角"
-                android:textAlignment="center" app:layout_constraintStart_toEndOf="@+id/textTRoll"
-                app:layout_constraintHorizontal_bias="0.5" app:layout_constraintEnd_toStartOf="@+id/textTYaw"
-                app:layout_constraintTop_toTopOf="@+id/textTRoll"/>
-        <TextView
-                android:id="@+id/textTYaw"
-                android:layout_width="90dp"
-                android:layout_height="30dp"
-                android:text="偏航角"
-                android:textAlignment="center" app:layout_constraintStart_toEndOf="@+id/textRoll"
-                app:layout_constraintHorizontal_bias="0.5" app:layout_constraintEnd_toStartOf="@+id/textYaw"
-                app:layout_constraintTop_toTopOf="@+id/textRoll"/>
-
-        <TextView
-                android:id="@+id/textYaw"
-                android:layout_width="90dp"
-                android:layout_height="30dp"
-                android:text="偏航角"
-                android:textAlignment="center" app:layout_constraintStart_toEndOf="@+id/textTYaw"
-                app:layout_constraintHorizontal_bias="0.5" app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="@+id/textTYaw"/>
 
 
     </androidx.constraintlayout.widget.ConstraintLayout>

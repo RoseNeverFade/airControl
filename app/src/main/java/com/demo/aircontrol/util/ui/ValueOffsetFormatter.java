@@ -1,4 +1,4 @@
-package com.demo.aircontrol.ui.util;
+package com.demo.aircontrol.util.ui;
 
 import com.github.mikephil.charting.components.AxisBase;
 import com.github.mikephil.charting.formatter.ValueFormatter;
