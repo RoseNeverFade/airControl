@@ -485,7 +485,7 @@ public class Charts1Activity extends AppCompatActivity {
         private ArrayList<Point> iconPoints;
         private String title;
         private Point pos;
-        private double lineLength = 10;
+        private double lineLength = 5;
         private double yaw = 0;
 
         DroneIcon(MyXYDatasource datasource, int seriesIndex, String title) {

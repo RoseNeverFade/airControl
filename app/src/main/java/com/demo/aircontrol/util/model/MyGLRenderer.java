@@ -9,6 +9,13 @@ import javax.microedition.khronos.opengles.GL10;
 
 public class MyGLRenderer implements GLSurfaceView.Renderer {
 
+    // frustrum - nearest pixel
+    private static final float near = 1f;
+    // frustrum - fartest pixel
+    private static final float far = 100f;
+    private int width = 0;
+    private int height = 0;
+
     // vPMatrix is an abbreviation for "Model View Projection Matrix"
     private final float[] vPMatrix = new float[16];
     private final float[] projectionMatrix = new float[16];
@@ -31,8 +38,8 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
 
     public void onSurfaceCreated(GL10 unused, EGLConfig config) {
         // Set the background frame color
-        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        GLES20.glClearDepthf(1.0f);
+        GLES20.glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        //GLES20.glClearDepthf(1.0f);
 
         //开启深度测试
         //GLES20.glEnable(GLES20.GL_CULL_FACE);
@@ -69,20 +76,47 @@ public class MyGLRenderer implements GLSurfaceView.Renderer {
         // Combine the rotation matrix with the projection and camera view
         // Note that the vPMatrix factor *must be first* in order
         // for the matrix multiplication product to be correct.
-        Matrix.multiplyMM(scratch, 0, vPMatrix, 0, rotationMatrix, 0);
+        //Matrix.multiplyMM(scratch, 0, vPMatrix, 0, rotationMatrix, 0);
 
         // Draw shape
 //        mTriangle.draw(vPMatrix);
         mTriangle.draw(scratch);
     }
 
+    public float getNear() {
+        return near;
+    }
+
+    public float getFar() {
+        return far;
+    }
+
+
     public void onSurfaceChanged(GL10 unused, int width, int height) {
+        this.width = width;
+        this.height = height;
 
         GLES20.glViewport(0, 0, width, height);
         float ratio = (float) width / height;
 
         // this projection matrix is applied to object coordinates
         // in the onDrawFrame() method
-        Matrix.frustumM(projectionMatrix, 0, -ratio, ratio, -1, 1, 3, 7);
+        Matrix.frustumM(projectionMatrix, 0, -ratio, ratio, -1, 1, getNear(), getFar());
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+    public float[] getModelProjectionMatrix() {
+        return projectionMatrix;
+    }
+
+    public float[] getModelViewMatrix() {
+        return viewMatrix;
     }
 }

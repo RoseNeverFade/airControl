@@ -17,7 +17,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import com.androidplot.util.PixelUtils;
 import com.androidplot.xy.*;
-import com.demo.aircontrol.util.model.MyGLSurfaceView;
+import com.demo.aircontrol.util.model.ModelSurfaceView;
+import com.demo.aircontrol.util.model.SceneLoader;
+import org.andresoviedo.util.android.ContentUtils;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -41,7 +43,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     ArrayList<Point> roundPoints;
     boolean testStart = false;
     private XYPlot heightPlot;
-    private MyGLSurfaceView gLView;
+    SceneLoader scene;
+    private ModelSurfaceView gLView;
 
 
     //显示信息
@@ -260,11 +263,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         //3d model
         ConstraintLayout layout = findViewById(R.id.modelBlock);
-        gLView = new MyGLSurfaceView(this);
+        try {
+            gLView = new ModelSurfaceView(this);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         layout.addView(gLView);
 
         droneData = droneData.getInstance();
         droneData.setContext(this);
+        //copyAssets();
+
         initUI();
     }
 
@@ -338,8 +347,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    private Button btnPic3; //Button A
-
     private void initUI() {
 
         //显示信息
@@ -401,6 +408,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         routePlot = (XYPlot) findViewById(R.id.route_plot);
         initChartData();
 
+        loadModelFromAssets();
+        scene = new SceneLoader(this);
+        scene.init();
         if (MyBuildConfig.isDebug) {
             droneData.loadFakeGPSData();
         }
@@ -483,12 +493,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         SimpleXYSeries axisSeries = new SimpleXYSeries("axis");
         axisSeries.addFirst(axis.x, axis.y);
 
-        double theta = 2 * Math.PI / pointNum;
         for (int i = 0; i < 128; i++) {
-            Number x = axis.x.doubleValue() + r * Math.cos(theta * i);
-            Number y = axis.y.doubleValue() + r * Math.sin(theta * i);
+            Number x = axis.x.doubleValue() + r * Math.cos(2 * Math.PI * i / pointNum);
+            Number y = axis.y.doubleValue() + r * Math.sin(2 * Math.PI * i / pointNum);
             circleSeries.addFirst(x, y);
         }
+        circleSeries.addFirst(axis.x.doubleValue() + r, axis.y);
+
         LineAndPointFormatter axisFormatter =
                 new LineAndPointFormatter(this, R.xml.circle_axis_formatter);
         LineAndPointFormatter circleFormatter = new LineAndPointFormatter(
@@ -511,6 +522,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             ChartTestThread myThread = new ChartTestThread(this);
             myThread.start();
         }
+    }
+
+    public ModelSurfaceView getGLView() {
+        return gLView;
+    }
+
+    public SceneLoader getScene() {
+        return scene;
+    }
+
+    private void loadModelFromAssets() {
+        ContentUtils.provideAssets(this);
     }
 
     class ChartTestThread extends Thread {
@@ -1319,7 +1342,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         View popupWindow_view = getLayoutInflater().inflate(R.layout.pop_history, null,
                 false);
         /* 创建PopupWindow实例,200,150分别是宽度和高度 */
-        popupWindowHistory = new PopupWindow(popupWindow_view, 500, 800, true);
+        popupWindowHistory = new PopupWindow(popupWindow_view, 500, 400, true);
 
         popupWindowHistory.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
         popupWindowHistory.setBackgroundDrawable(new BitmapDrawable());

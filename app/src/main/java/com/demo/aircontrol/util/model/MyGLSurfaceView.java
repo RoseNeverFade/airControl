@@ -3,12 +3,8 @@ package com.demo.aircontrol.util.model;
 import android.content.Context;
 import android.opengl.GLSurfaceView;
 
-import java.util.ArrayList;
-
 public class MyGLSurfaceView extends GLSurfaceView {
-    public static ObjLoaderUtil.ObjData objData;
     private final MyGLRenderer renderer;
-    private ArrayList<ObjLoaderUtil.ObjData> objectList = new ArrayList<ObjLoaderUtil.ObjData>();
 
     public MyGLSurfaceView(Context context) {
         super(context);
@@ -17,13 +13,6 @@ public class MyGLSurfaceView extends GLSurfaceView {
         setEGLContextClientVersion(2);
         setEGLConfigChooser(8, 8, 8, 8, 24, 0);
         //setEGLConfigChooser(true);
-
-        try {
-            objectList = ObjLoaderUtil.load("model/untitled.obj", getResources());
-            objData = objectList.get(0);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
 
 
         renderer = new MyGLRenderer();
@@ -36,6 +25,10 @@ public class MyGLSurfaceView extends GLSurfaceView {
 
     public void rotate(double roll, double pitch, double yaw) {
         renderer.rotate(roll, pitch, yaw);
+    }
+
+    public MyGLRenderer getModelRenderer() {
+        return renderer;
     }
 
 }
