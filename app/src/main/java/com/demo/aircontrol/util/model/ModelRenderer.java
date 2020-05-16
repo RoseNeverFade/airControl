@@ -23,6 +23,8 @@ import java.util.Map;
 
 public class ModelRenderer implements GLSurfaceView.Renderer {
 
+    private float[] rotation;
+
     private final static String TAG = ModelRenderer.class.getName();
     /**
      * Add 0.5f to the alpha component to the global shader so we can see through the skin
@@ -126,6 +128,7 @@ public class ModelRenderer implements GLSurfaceView.Renderer {
 
         // Enable not drawing out of view port
 //		GLES20.glEnable(GLES20.GL_SCISSOR_TEST);
+        rotation = new float[]{0, 0, 0};
     }
 
     @Override
@@ -401,7 +404,8 @@ public class ModelRenderer implements GLSurfaceView.Renderer {
 
                 // draw solids
                 else {
-                    drawerObject.draw(objData, projectionMatrix, viewMatrix,
+
+                    drawerObject.draw(objData.setRotation(rotation), projectionMatrix, viewMatrix,
                             textureId, lightPosInWorldSpace, colorMask, cameraPosInWorldSpace);
                 }
 
@@ -442,6 +446,13 @@ public class ModelRenderer implements GLSurfaceView.Renderer {
                 Log.e("ModelRenderer", "There was a problem rendering the object '" + objData.getId() + "':" + ex.getMessage(), ex);
             }
         }
+    }
+
+    //修改旋转矩阵
+    public void rotateModel(double yaw, double pitch, double roll) {
+        rotation[0] = (float) pitch;
+        rotation[1] = (float) yaw;
+        rotation[2] = (float) roll;
     }
 
     public int getWidth() {

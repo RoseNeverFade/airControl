@@ -45,6 +45,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private XYPlot heightPlot;
     SceneLoader scene;
     private ModelSurfaceView gLView;
+    private SimpleXYSeries circleSeries;
+    private SimpleXYSeries axisSeries;
 
 
     //显示信息
@@ -203,6 +205,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     rolllist.add(updatedata[6]);
                     SimpleDateFormat df = new SimpleDateFormat("yyyy/MM/dd-HH:mm:ss:SSS");//设置日期格式
                     timelist.add(df.format(new Date()));
+
+                    addChartPoint(new Point(Double.parseDouble(updatedata[1]), Double.parseDouble(updatedata[2])),
+                            Double.parseDouble(updatedata[4]),
+                            Double.parseDouble(updatedata[3]));
+                    rotateModel(Double.parseDouble(updatedata[4]),
+                            Double.parseDouble(updatedata[5]),
+                            Double.parseDouble(updatedata[6]));
                 } else if (data.contains("connectsuccess")) {
                     initPopupWindowResult("连接成功");
                     popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
@@ -276,7 +285,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         initUI();
     }
-
 
     @Override
     public void onClick(View v) {
@@ -462,6 +470,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     }
 
+    //错误提示
+    private void makeToastText(final String text, final int toastDuration) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(getApplicationContext(), text, toastDuration).show();
+            }
+        });
+    }
+
     /**
      * 插入并更新图表数据
      *
@@ -488,9 +506,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      * @param r    半径
      */
     private void addCircle(Point axis, double r) {
+        if (circleSeries != null) {
+            circleSeries.clear();
+        }
+        if (axisSeries != null) {
+            axisSeries.clear();
+        }
         int pointNum = 128;
-        SimpleXYSeries circleSeries = new SimpleXYSeries("circlePoint");
-        SimpleXYSeries axisSeries = new SimpleXYSeries("axis");
+        circleSeries = new SimpleXYSeries("circlePoint");
+        axisSeries = new SimpleXYSeries("axis");
         axisSeries.addFirst(axis.x, axis.y);
 
         for (int i = 0; i < 128; i++) {
@@ -511,6 +535,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         circleFormatter.setLegendIconEnabled(false);
         routePlot.addSeries(axisSeries, axisFormatter);
         routePlot.addSeries(circleSeries, circleFormatter);
+    }
+
+    /**
+     * 旋转无人机模型
+     */
+    private void rotateModel(double yaw, double pitch, double roll) {
+        gLView.rotateModel(yaw, pitch, roll);
     }
 
     /**
@@ -536,34 +567,30 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         ContentUtils.provideAssets(this);
     }
 
-    class ChartTestThread extends Thread {
-        MainActivity m;
-
-        ChartTestThread(MainActivity m) {
-            this.m = m;
-        }
-
-        @Override
-        public void run() {
-            double r = 60d;
-            int num = 720;
-            double h = 30d;
-            m.addCircle(new Point(0, 0), r);
-            double theta = 2 * Math.PI / 360;
-            for (int i = 0; i < 720; i++) {
-                double t = theta * i;
-                Number x = r * Math.cos(t);
-                Number y = r * Math.sin(t);
-                double yaw = Math.toDegrees(t) + 90;
-
-                m.addChartPoint(new Point(x.doubleValue() + Math.random() * 0.1, y.doubleValue() + Math.random() * 0.1), yaw + Math.random(), h + Math.random() * 0.5);
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        switch (requestCode) {
+            case FILE_SELECT_CODE:
+                if (resultCode == RESULT_OK) {
+                    // Get the Uri of the selected file
+                    Uri uri = data.getData();
+                    Log.d("TAG", "File Uri: " + uri.toString());
+                    // Get the path
+                    String path = FileUtils.getPath(this, uri);
+                    Log.d("TAG", "File Path: " + path);
+                    // Get the file instance
+                    // File file = new File(path);
+                    // Initiate the upload
+                    try {
+                        droneData.loadGPSData(path);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        makeToastText("文件读取失败，请检查文件格式或内容！", Toast.LENGTH_LONG);
+                    }
                 }
-            }
+                break;
         }
+        super.onActivityResult(requestCode, resultCode, data);
     }
 
     private void showFileChooser() {
@@ -582,31 +609,124 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        switch (requestCode) {
-            case FILE_SELECT_CODE:
-                if (resultCode == RESULT_OK) {
-                    // Get the Uri of the selected file
-                    Uri uri = data.getData();
-                    Log.d("TAG", "File Uri: " + uri.toString());
-                    // Get the path
-                    String path = FileUtils.getPath(this, uri);
-                    Log.d("TAG", "File Path: " + path);
-                    // Get the file instance
-                    // File file = new File(path);
-                    // Initiate the upload
-                    droneData.loadGPSData(path);
-                }
-                break;
+    protected void initPopupWindowConfirm(final int type) {
+        View v = getLayoutInflater().inflate(R.layout.pop_confirm, null, false);
+        popupWindowCon = new PopupWindow(v, 1000, 500, true);
+        popupWindowCon.setFocusable(true);
+
+        popupWindowCon.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
+        popupWindowCon.setBackgroundDrawable(new BitmapDrawable());
+
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.alpha = 0.5f;//设置阴影透明度
+        getWindow().setAttributes(lp);
+        popupWindowCon.setOnDismissListener(new PopupWindow.OnDismissListener() {
+
+            @Override
+            public void onDismiss() {
+                WindowManager.LayoutParams lp = getWindow().getAttributes();
+                lp.alpha = 1f;
+                getWindow().setAttributes(lp);
+            }
+        });
+
+        /* pop.xml视图里面的控件 */
+        Button btyes = (Button) v.findViewById(R.id.bt_yes);
+        Button btno = (Button) v.findViewById(R.id.bt_no);
+        TextView txtcontitle = (TextView) v.findViewById(R.id.txt_contitle);
+
+        if (type == 21 || type == 31 || type == 51) txtcontitle.setText("保存配置并等待编队命令");
+        else if (type == 1) {
+            txtcontitle.setText("中止执行任务");
         }
-        super.onActivityResult(requestCode, resultCode, data);
+
+        //可视化
+        if (type == 31) {
+            addCircle(new Point(hotlng, hotlat), hotr);
+        }
+
+
+        btyes.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String str;
+                String res;
+
+                if (type == 1) {
+                    try {
+                        serverConnector.send("stop");
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        initPopupWindowResult("失败");
+                        popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                    }
+                } else if (type / 10 == 2) {
+                    String choose = "";
+                    if (type == 21) choose = "all";
+                    else if (type == 22) choose = "alone";
+                    try {
+                        serverConnector.send("way," + choose + "," + teamnum + "," + waylng + "," + waylat + "," + wayalt + "," + wayvel);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        initPopupWindowResult("失败");
+                        popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                    }
+                    popupWindowWay.dismiss();
+                } else if (type / 10 == 3) {
+                    popupWindowHot.dismiss();
+                    String choose = "";
+                    if (type == 31) choose = "all";
+                    else if (type == 32) choose = "alone";
+                    try {
+                        serverConnector.send("hot," + choose + "," + teamnum + "," + hotlng + "," + hotlat + "," + hotalt + "," + hotr + "," + hotw + "," + hotstart);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        initPopupWindowResult("失败");
+                        popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                    }
+                } else if (type / 10 == 4) {
+                    popupWindowRotate.dismiss();
+                    str = "";
+                    if (type == 41) str += "east";
+                    else if (type == 42) str += "south";
+                    else if (type == 43) str += "west";
+                    else if (type == 44) str += "north";
+                    try {
+                        serverConnector.send("rotate," + str);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        initPopupWindowResult("失败");
+                        popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                    }
+
+                } else if (type / 10 == 5) {
+                    String choose = "";
+                    if (type == 51) choose = "all";
+                    else if (type == 52) choose = "alone";
+                    try {
+                        serverConnector.send("ar," + choose + "," + teamnum + "," + autorotatew);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        initPopupWindowResult("失败");
+                        popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                    }
+                    popupWindowAutorotate.dismiss();
+                }
+                popupWindowCon.dismiss();
+            }
+        });
+
+        btno.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                popupWindowCon.dismiss();
+            }
+        });
     }
 
 
-    private void outputGPStoFile(String FileName)
-    {
-        String ftime = ""+now.get(Calendar.YEAR)+'_'+now.get(Calendar.MONTH)+'_'+now.get(Calendar.DAY_OF_MONTH)+'-'+now.get(Calendar.HOUR_OF_DAY)+':'+now.get(Calendar.MINUTE);
+    private void outputGPStoFile(String FileName) {
+        String ftime = "" + now.get(Calendar.YEAR) + '_' + now.get(Calendar.MONTH) + '_' + now.get(Calendar.DAY_OF_MONTH) + '-' + now.get(Calendar.HOUR_OF_DAY) + ':' + now.get(Calendar.MINUTE);
 
         String state;
         String path;
@@ -843,18 +963,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
     }
 
-    protected void initPopupWindowConfirm(final int type) {
-        View v = getLayoutInflater().inflate(R.layout.pop_confirm, null, false);
-        popupWindowCon = new PopupWindow(v, 1000, 500, true);
-        popupWindowCon.setFocusable(true);
+    protected void initPopupWindowHistory() {
+        /* TODO Auto-generated method stub */
 
-        popupWindowCon.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
-        popupWindowCon.setBackgroundDrawable(new BitmapDrawable());
+        /* 获取自定义布局文件pop.xml的视图 */
+        View popupWindow_view = getLayoutInflater().inflate(R.layout.pop_history, null,
+                false);
+        /* 创建PopupWindow实例,200,150分别是宽度和高度 */
+        popupWindowHistory = new PopupWindow(popupWindow_view, 500, 400, true);
+
+        popupWindowHistory.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
+        popupWindowHistory.setBackgroundDrawable(new BitmapDrawable());
 
         WindowManager.LayoutParams lp = getWindow().getAttributes();
         lp.alpha = 0.5f;//设置阴影透明度
         getWindow().setAttributes(lp);
-        popupWindowCon.setOnDismissListener(new PopupWindow.OnDismissListener() {
+        popupWindowHistory.setOnDismissListener(new PopupWindow.OnDismissListener() {
 
             @Override
             public void onDismiss() {
@@ -865,94 +989,50 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
 
         /* pop.xml视图里面的控件 */
-        Button btyes = (Button) v.findViewById(R.id.bt_yes);
-        Button btno = (Button) v.findViewById(R.id.bt_no);
-        TextView txtcontitle = (TextView) v.findViewById(R.id.txt_contitle);
-
-        if (type == 21 || type == 31 || type == 51) txtcontitle.setText("保存配置并等待编队命令");
-        else if (type == 1) {
-            txtcontitle.setText("中止执行任务");
-        }
+        Button btnLoad = (Button) popupWindow_view.findViewById(R.id.btn_load);
+        Button btnPic1 = (Button) popupWindow_view.findViewById(R.id.btn_hisRoute);
+        Button btnPic2 = (Button) popupWindow_view.findViewById(R.id.btn_hisAnalyze);
 
 
-        btyes.setOnClickListener(new View.OnClickListener() {
+        btnLoad.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String str;
-                String res;
-
-                if (type == 1) {
-                    try {
-                        serverConnector.send("stop");
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        initPopupWindowResult("失败");
-                        popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-                    }
-                } else if (type / 10 == 2) {
-                    String choose = "";
-                    if (type == 21) choose = "all";
-                    else if (type == 22) choose = "alone";
-                    try {
-                        serverConnector.send("way," + choose + "," + teamnum + "," + waylng + "," + waylat + "," + wayalt + "," + wayvel);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        initPopupWindowResult("失败");
-                        popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-                    }
-                    popupWindowWay.dismiss();
-                } else if (type / 10 == 3) {
-                    popupWindowHot.dismiss();
-                    String choose = "";
-                    if (type == 31) choose = "all";
-                    else if (type == 32) choose = "alone";
-                    try {
-                        serverConnector.send("hot," + choose + "," + teamnum + "," + hotlng + "," + hotlat + "," + hotalt + "," + hotr + "," + hotw + "," + hotstart);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        initPopupWindowResult("失败");
-                        popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-                    }
-                } else if (type / 10 == 4) {
-                    popupWindowRotate.dismiss();
-                    str = "";
-                    if (type == 41) str += "east";
-                    else if (type == 42) str += "south";
-                    else if (type == 43) str += "west";
-                    else if (type == 44) str += "north";
-                    try {
-                        serverConnector.send("rotate," + str);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        initPopupWindowResult("失败");
-                        popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-                    }
-
-                } else if (type / 10 == 5) {
-                    String choose = "";
-                    if (type == 51) choose = "all";
-                    else if (type == 52) choose = "alone";
-                    try {
-                        serverConnector.send("ar," + choose + "," + teamnum + "," + autorotatew);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        initPopupWindowResult("失败");
-                        popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-                    }
-                    popupWindowAutorotate.dismiss();
-                }
-                popupWindowCon.dismiss();
+                showFileChooser();
             }
-        } );
+        });
 
-        btno.setOnClickListener( new View.OnClickListener()
-        {
+        btnPic1.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick( View v )
-            {
-                popupWindowCon.dismiss();
+            public void onClick(View v) {
+                if (!droneData.isLoaded()) {
+                    makeToastText("请先读取试验记录！", Toast.LENGTH_SHORT);
+                    return;
+                }
+                try {
+                    Intent intent = new Intent(MainActivity.this, Charts1Activity.class);
+                    startActivity(intent);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
             }
-        } );
+        });
+
+        btnPic2.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (!droneData.isLoaded()) {
+                    makeToastText("请先读取试验记录！", Toast.LENGTH_SHORT);
+                    return;
+                }
+                try {
+                    Intent intent = new Intent(MainActivity.this, Charts3Activity.class);
+                    startActivity(intent);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
     protected void initPopupWindowTeam() {
@@ -1165,7 +1245,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                 initPopupWindowConfirm(31);
                 popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-
             }
         });
 
@@ -1335,68 +1414,37 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     }
 
-    protected void initPopupWindowHistory() {
-        /* TODO Auto-generated method stub */
+    class ChartTestThread extends Thread {
+        MainActivity m;
 
-        /* 获取自定义布局文件pop.xml的视图 */
-        View popupWindow_view = getLayoutInflater().inflate(R.layout.pop_history, null,
-                false);
-        /* 创建PopupWindow实例,200,150分别是宽度和高度 */
-        popupWindowHistory = new PopupWindow(popupWindow_view, 500, 400, true);
+        ChartTestThread(MainActivity m) {
+            this.m = m;
+        }
 
-        popupWindowHistory.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
-        popupWindowHistory.setBackgroundDrawable(new BitmapDrawable());
+        @Override
+        public void run() {
+            double r = 60d;
+            int num = 720;
+            double h = 30d;
+            m.addCircle(new Point(0, 0), r);
+            double theta = 2 * Math.PI / 360;
+            for (int i = 0; i < 720; i++) {
+                double t = theta * i;
+                Number x = r * Math.cos(t);
+                Number y = r * Math.sin(t);
+                double yaw = Math.toDegrees(t) + 90;
 
-        WindowManager.LayoutParams lp = getWindow().getAttributes();
-        lp.alpha = 0.5f;//设置阴影透明度
-        getWindow().setAttributes(lp);
-        popupWindowHistory.setOnDismissListener(new PopupWindow.OnDismissListener() {
-
-            @Override
-            public void onDismiss() {
-                WindowManager.LayoutParams lp = getWindow().getAttributes();
-                lp.alpha = 1f;
-                getWindow().setAttributes(lp);
-            }
-        });
-
-        /* pop.xml视图里面的控件 */
-        Button btnLoad = (Button) popupWindow_view.findViewById(R.id.btn_load);
-        Button btnPic1 = (Button) popupWindow_view.findViewById(R.id.btn_hisRoute);
-        Button btnPic2 = (Button) popupWindow_view.findViewById(R.id.btn_hisAnalyze);
-
-
-        btnLoad.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showFileChooser();
-            }
-        });
-
-        btnPic1.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+                m.addChartPoint(new Point(x.doubleValue() + Math.random() * 0.1, y.doubleValue() + Math.random() * 0.1), yaw + Math.random(), h + Math.random() * 0.5);
+                double pitch = -10;
+                double roll = 0;
+                m.rotateModel(yaw, pitch, roll);
                 try {
-                    Intent intent = new Intent(MainActivity.this, Charts1Activity.class);
-                    startActivity(intent);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-
-            }
-        });
-
-        btnPic2.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                try {
-                    Intent intent = new Intent(MainActivity.this, Charts3Activity.class);
-                    startActivity(intent);
-                } catch (Exception e) {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             }
-        });
+        }
     }
 
     private class ConnectRunnable implements Runnable {

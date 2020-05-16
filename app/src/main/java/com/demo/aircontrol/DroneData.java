@@ -32,9 +32,6 @@ public class DroneData {
     private ArrayList<Double> deltaDis;
     private ArrayList<Double> deltaAlt;
     private ArrayList<Double> deltaYaw;   //偏航角
-
-
-    //TODO: normalization gpsLng,gpsLat,gpsAlt FOR BETTER GRAPH
     private ArrayList<Double> deltaPitch; //俯仰角
     private ArrayList<Double> deltaRoll;  //横滚角
     private DateFormat format;
@@ -124,7 +121,7 @@ public class DroneData {
         return var;
     }
 
-    public void loadGPSData(String dir) {
+    public void loadGPSData(String dir) throws IOException {
         initData();
         try {
             //uncomment this for debug
@@ -134,8 +131,7 @@ public class DroneData {
             BufferedReader in = new BufferedReader(fileReader);
             String str = "";
             if ((str = in.readLine()) == null) {
-                //TODO: 异常处理
-                return;
+                throw new IOException("Empty File!");
             }
             in.readLine();
             while ((str = in.readLine()) != null) {
@@ -143,7 +139,7 @@ public class DroneData {
             }
             calculateDelta();
         } catch (IOException e) {
-            e.printStackTrace();
+            throw e;
         }
     }
 
@@ -207,6 +203,14 @@ public class DroneData {
         gpsYaw.add(Double.parseDouble(arr[4]));
         gpsPitch.add(Double.parseDouble(arr[5]));
         gpsRoll.add(Double.parseDouble(arr[6]));
+    }
+
+    public boolean isLoaded() {
+        if (gpsLng.size() > 0) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
 //    public void refreshGPSData() {

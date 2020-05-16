@@ -37,6 +37,10 @@ public class ModelSurfaceView extends GLSurfaceView {
         touchHandler = new TouchController(this, mRenderer);
     }
 
+    public void rotateModel(double yaw, double pitch, double roll) {
+        mRenderer.rotateModel(yaw, pitch, roll);
+    }
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         return touchHandler.onTouchEvent(event);

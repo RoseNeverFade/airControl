@@ -190,7 +190,7 @@ public class TouchController {
 				// Log.v(TAG, "Translating camera (dx,dy) '" + dx1 + "','" + dy1 + "'...");
 				dx1 = (float) (dx1 / max * Math.PI * 2);
 				dy1 = (float) (dy1 / max * Math.PI * 2);
-				camera.translateCamera(dx1, dy1);
+				camera.translateCamera(dx1, 0);
 			} else if (pointerCount == 2) {
 				if (fingersAreClosing) {
 					touchStatus = TOUCH_STATUS_ZOOMING_CAMERA;
@@ -434,6 +434,7 @@ class TouchScreen {
 						float xc = (view.getWidth() / 2) * sx;
 						float yc = (view.getHeight() / 2) * sx;
 						matrix.postRotate(r, tx + xc, ty + yc);
+
 					}
 				}
 				break;
