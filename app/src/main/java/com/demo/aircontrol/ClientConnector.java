@@ -24,7 +24,7 @@ public class ClientConnector {
         if (mClient == null) {
             mClient = new Socket(mDstName, mDesPort);
         }
-
+        System.out.println("---------------------------------connect success");
         //获取其他客户端发送过来的数据
         InputStream inputStream = mClient.getInputStream();
         byte[] buffer = new byte[1024];

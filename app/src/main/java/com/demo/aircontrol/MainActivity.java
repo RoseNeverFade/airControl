@@ -1,24 +1,52 @@
 package com.demo.aircontrol;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.HandlerThread;
+import android.os.*;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.*;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import com.androidplot.util.PixelUtils;
 import com.androidplot.xy.*;
 import com.demo.aircontrol.util.model.ModelSurfaceView;
 import com.demo.aircontrol.util.model.SceneLoader;
+import dji.common.error.DJIError;
+import dji.common.error.DJISDKError;
+import dji.common.flightcontroller.FlightControllerState;
+import dji.common.flightcontroller.virtualstick.FlightControlData;
+import dji.common.flightcontroller.virtualstick.YawControlMode;
+import dji.common.mission.hotpoint.HotpointHeading;
+import dji.common.mission.hotpoint.HotpointMission;
+import dji.common.mission.hotpoint.HotpointMissionEvent;
+import dji.common.mission.hotpoint.HotpointStartPoint;
+import dji.common.mission.waypoint.*;
+import dji.common.model.LocationCoordinate2D;
+import dji.common.util.CommonCallbacks;
+import dji.keysdk.FlightControllerKey;
+import dji.keysdk.KeyManager;
+import dji.sdk.base.BaseComponent;
+import dji.sdk.base.BaseProduct;
+import dji.sdk.flightcontroller.FlightController;
+import dji.sdk.mission.MissionControl;
+import dji.sdk.mission.hotpoint.HotpointMissionOperator;
+import dji.sdk.mission.hotpoint.HotpointMissionOperatorListener;
+import dji.sdk.mission.waypoint.WaypointMissionOperator;
+import dji.sdk.mission.waypoint.WaypointMissionOperatorListener;
+import dji.sdk.products.Aircraft;
+import dji.sdk.sdkmanager.DJISDKManager;
 import org.andresoviedo.util.android.ContentUtils;
 
 import java.io.BufferedWriter;
@@ -26,14 +54,98 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Date;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+import static dji.keysdk.FlightControllerKey.HOME_LOCATION_LATITUDE;
+import static dji.keysdk.FlightControllerKey.HOME_LOCATION_LONGITUDE;
 import static java.lang.Thread.sleep;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, ClientConnector.ConnectLinstener {
+
+    public static final String FLAG_CONNECTION_CHANGE = "dji_sdk_connection_change";
+    private static final String TAG = MainActivity.class.getName();
+    private static final String[] REQUIRED_PERMISSION_LIST = new String[]{
+            Manifest.permission.VIBRATE,
+            Manifest.permission.INTERNET,
+            Manifest.permission.ACCESS_WIFI_STATE,
+            Manifest.permission.WAKE_LOCK,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.ACCESS_NETWORK_STATE,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.CHANGE_WIFI_STATE,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.BLUETOOTH,
+            Manifest.permission.BLUETOOTH_ADMIN,
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.READ_PHONE_STATE,
+    };
+    private static final int REQUEST_PERMISSION_CODE = 12345;
+    private static UAVState uavstate;
+    private static BaseProduct mProduct;
+    private Handler mHandler;
+    private FlightController mFlightController = null;
+    private WaypointMissionOperatorListener waypointListener;
+    private HotpointMissionOperatorListener hotpointlistener;
+    private WaypointMissionOperator waypointMissionOperator = null;
+    private HotpointMissionOperator hotpointMissionOperator = null;
+    //飞控数据
+    private double droneLocationLat = 181, droneLocationLng = 181;
+    private double droneLocationAlt = 0;
+    private double droneAttitudeYaw = 0;
+    private double droneAttitudePitch = 0;
+    private double droneAttitudeRoll = 0;
+    private String droneTime;
+    private ArrayList<String> timelist;
+    private ArrayList<String> lnglist;
+    private ArrayList<String> latlist;
+    private ArrayList<String> altlist;
+    private ArrayList<String> rolllist;
+    private ArrayList<String> pitchlist;
+    private ArrayList<String> yawlist;
+    private PopupWindow popupWindowTeam;
+    private PopupWindow popupWindowWay;
+    private PopupWindow popupWindowHot;
+    private PopupWindow popupWindowCon;
+    private PopupWindow popupWindowCserver;
+    private PopupWindow popupWindowJointeam;
+    private PopupWindow popupWindowRotate;
+    private PopupWindow popupWindowAutorotate;
+    private ClientConnector serverConnector;
+    private String clientid;
+    private HandlerThread serverHandlerThread;
+    private Handler serverHandler;
+    private int teamnum;
+    private int teamleader;
+    private int stopmission;
+    private double waylng;
+    private double waylat;
+    private float wayalt;
+    private float wayvel;
+    private double hotlng;
+    private double hotlat;
+    private double hotalt;
+    private float hotw;
+    private double hotr;
+    private String hotstart;
+    private float autorotatew;
+    private String serverhost;
+    private int serverport;
+    //显示信息
+    private TextView tLng;
+    private TextView tLat;
+    private TextView tAlt;
+    private TextView tPitch;
+    private TextView tRoll;
+    private TextView tYaw;
+    private TextView connectstate;
+    private Button btwaypoint;
+    private Button bthotpoint;
+    private Button btteam;
+    private Button btcserver;
+    private Button btnDemRecord;//记录经纬数据
+    private Button btnDemOutput;//输出经纬数据至文件
+    private TextView missioninfo;
 
     //可视化相关
     ScatterSeries routeScatters;
@@ -48,226 +160,39 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private SimpleXYSeries circleSeries;
     private SimpleXYSeries axisSeries;
 
-
-    //显示信息
-    private TextView tLng;
-    private TextView tLat;
-    private TextView tAlt;
-    private TextView tPitch;
-    private TextView tRoll;
-    private TextView tYaw;
-    private Button btwaypoint;
-    private Button bthotpoint;
-    private Button btteam;
-    private Button btcserver;
-    private Button btnDemRecord;//记录经纬数据
-    private Button btnDemOutput;//输出经纬数据至文件
-
     private static final int FILE_SELECT_CODE = 0;
     private Button btnHistory; //Button ...
     private Button btnHistoryRoute; //Button A
     private Button btnHistoryAnalyze; //Button C
     private XYPlot routePlot;
 
-    private TextView missioninfo;
-    private Button btstop;
-
-    private PopupWindow popupWindowTeam;
-    private PopupWindow popupWindowWay;
-    private PopupWindow popupWindowHot;
-    private PopupWindow popupWindowCon;
-    private PopupWindow popupWindowCserver;
     private PopupWindow popupWindowResult;
-    private PopupWindow popupWindowJointeam;
-    private PopupWindow popupWindowRotate;
-    private PopupWindow popupWindowAutorotate;
     private PopupWindow popupWindowHistory;
 
     private Calendar now = Calendar.getInstance();
 
     private DroneData droneData;
+    private Button btstop;
+    private List<String> missingPermission = new ArrayList<>();
+    private AtomicBoolean isRegistrationInProgress = new AtomicBoolean(false);
+    private Runnable updateRunnable = new Runnable() {
 
-    private int teamnum;
-    private int teamleader;
-
-    private double waylng;
-    private double waylat;
-    private double wayalt;
-    private double wayvel;
-    private double hotlng;
-    private double hotlat;
-    private double hotalt;
-    private double hotw;
-    private double hotr;
-    private String hotstart;
-    private double autorotatew;
-    private String serverhost;
-    private int serverport;
-
-    private HandlerThread serverHandlerThread;
-    private Handler serverHandler;
-    private ClientConnector serverConnector;
-
-    private ArrayList<String> timelist;
-    private ArrayList<String> lnglist;
-    private ArrayList<String> latlist;
-    private ArrayList<String> altlist;
-    private ArrayList<String> rolllist;
-    private ArrayList<String> pitchlist;
-    private ArrayList<String> yawlist;
-
-//    class TimeThread extends Thread {
-//        @Override
-//        public void run() {
-//            do {
-//                try {
-//                    Thread.sleep(1000);
-//                    Message msg = new Message();
-//                    msg.what = 1;  //消息(一个整型值)
-//                    mHandler.sendMessage(msg);// 每隔1秒发送一个msg给mHandler
-//                } catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
-//            } while (true);
-//        }
-//    }
-
-    //在主线程里面处理消息并更新UI界面
-//    private Handler mHandler = new Handler(){
-//        @Override
-//        public void handleMessage(Message msg) {
-//            super.handleMessage(msg);
-//            switch (msg.what) {
-//                case 1:
-//                    long sysTime = System.currentTimeMillis();//获取系统时间
-//                    CharSequence sysTimeStr = DateFormat.format("hh:mm:ss", sysTime);//时间显示格式
-//                    tLng.setText(sysTimeStr); //更新时间
-//                    break;
-//                default:
-//                    break;
-//
-//            }
-//        }
-//    };
-
-
-//    private String sendToServer(String msg){
-//        try {
-//            Socket socket = new Socket();
-//            socket.connect(new InetSocketAddress("192.168.0.108",9053));
-//
-//            //获取输出流，向服务器端发送信息
-//            OutputStream os=socket.getOutputStream();//字节输出流
-//            PrintWriter pw=new PrintWriter(os);//将输出流包装为打印流
-//            pw.write(msg);
-//            pw.flush();
-//            socket.shutdownOutput();//关闭输出流
-//
-//            InputStream is=socket.getInputStream();
-//            BufferedReader in = new BufferedReader(new InputStreamReader(is));
-//            String info=null;
-//            while((info=in.readLine())!=null){
-//                System.out.println(info);
-//            }
-//            is.close();
-//            in.close();
-//            socket.close();
-//            return info;
-//        } catch (UnknownHostException e) {
-//            e.printStackTrace();
-//            return "error";
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//            return "error";
-//        }
-//    }
-
-    @Override
-    public void onReceiveData(final String data) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                System.out.println("*****************************:" + data);
-                String str = "";
-                if (data.contains("updatedata")) {
-                    String[] updatedata = data.split(",");
-                    tLng.setText(updatedata[1]);
-                    lnglist.add(updatedata[1]);
-                    tLat.setText(updatedata[2]);
-                    latlist.add(updatedata[2]);
-                    tAlt.setText(updatedata[3]);
-                    altlist.add(updatedata[3]);
-                    tYaw.setText(updatedata[4]);
-                    yawlist.add(updatedata[4]);
-                    tPitch.setText(updatedata[5]);
-                    pitchlist.add(updatedata[5]);
-                    tRoll.setText(updatedata[6]);
-                    rolllist.add(updatedata[6]);
-                    SimpleDateFormat df = new SimpleDateFormat("yyyy/MM/dd-HH:mm:ss:SSS");//设置日期格式
-                    timelist.add(df.format(new Date()));
-
-                    addChartPoint(new Point(Double.parseDouble(updatedata[1]), Double.parseDouble(updatedata[2])),
-                            Double.parseDouble(updatedata[4]),
-                            Double.parseDouble(updatedata[3]));
-                    rotateModel(Double.parseDouble(updatedata[4]),
-                            Double.parseDouble(updatedata[5]),
-                            Double.parseDouble(updatedata[6]));
-                } else if (data.contains("connectsuccess")) {
-                    initPopupWindowResult("连接成功");
-                    popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-                } else if (data.contains("connecterror")) {
-                    initPopupWindowResult("连接失败");
-                    popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-                } else if (data.contains("createsuccess")) {
-                    teamnum = Integer.parseInt(data.split(",")[1]);
-                    teamleader = 1;
-                    initPopupWindowResult("创建成功！\n编队号：" + teamnum);
-                    popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-                } else if (data.contains("joinsuccess")) {
-                    teamnum = Integer.parseInt(data.split(",")[1]);
-                    initPopupWindowResult("加入编队成功");
-                    popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-                } else if (data.contains("teamnotfound")) {
-                    initPopupWindowResult("加入编队失败");
-                    popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-                } else if (data.contains("stopsuccess")) {
-                    missioninfo.setText("");
-                    btstop.setVisibility(View.GONE);
-                } else if (data.contains("finish")) {
-                    missioninfo.setText("");
-                    btstop.setVisibility(View.GONE);
-                    initPopupWindowResult("执行完毕");
-                    popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-                } else if (data.contains("waysavesuccess") || data.contains("wayexecutsuccess")) {
-                    if (data.contains("savesuccess")) str = "已保存航点飞行任务，等待编队执行命令。\n";
-                    else if (data.contains("executsuccess")) str = "开始执行航点飞行任务！\n";
-                    missioninfo.setText(str + "经度：" + waylng + " 纬度：" + waylat + " 高度：" + wayalt + " 速度：" + wayvel);
-                    btstop.setVisibility(View.VISIBLE);
-                } else if (data.contains("hotsavesuccess") || data.contains("hotexecutsuccess")) {
-                    if (data.contains("savesuccess")) str = "已保存圆周飞行任务，等待编队执行命令。\n";
-                    else if (data.contains("executsuccess")) str = "开始执行圆周飞行任务！\n";
-                    missioninfo.setText(str + "圆心经度：" + hotlng + " 圆心纬度：" + hotlat + " 圆心高度：" + hotalt + " 绕飞半径：" + hotr + " 角速度：" + hotw + " 起始方向：" + hotstart);
-                    btstop.setVisibility(View.VISIBLE);
-                } else if (data.contains("rotateexecutsuccess")) {
-                    str = "开始执行无人机转向任务！\n机头转向：" + data.split(",")[1];
-                    missioninfo.setText(str);
-                    btstop.setVisibility(View.VISIBLE);
-                    popupWindowRotate.dismiss();
-                } else if (data.contains("arexecutsuccess") || data.contains("arsavesuccess")) {
-                    if (data.contains("savesuccess")) str = "已保存原地旋转任务，等待编队执行命令。\n";
-                    else if (data.contains("executsuccess")) str = "开始执行原地旋转任务！\n";
-                    missioninfo.setText(str + "旋转速度：" + autorotatew);
-                    btstop.setVisibility(View.VISIBLE);
-                }
-            }
-        });
-    }
+        @Override
+        public void run() {
+            Intent intent = new Intent(FLAG_CONNECTION_CHANGE);
+            sendBroadcast(intent);
+        }
+    };
 
     private Button btnLoad; //Button A
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // When the compile and target version is higher than 22, please request the following permission at runtime to ensure the SDK works well.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            checkAndRequestPermissions();
+        }
         setContentView(R.layout.activity_main);
 
         //3d model
@@ -286,6 +211,114 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         initUI();
     }
 
+    private void initUI() {
+
+        //显示信息
+        tLng = (TextView) findViewById(R.id.textLng);
+        tLat = (TextView) findViewById(R.id.textLat);
+        tAlt = (TextView) findViewById(R.id.textAlt);
+        tPitch = (TextView) findViewById(R.id.textPitch);
+        tRoll = (TextView) findViewById(R.id.textRoll);
+        tYaw = (TextView) findViewById(R.id.textYaw);
+        connectstate = (TextView) findViewById(R.id.connectstate);
+
+        // ---------------设置单击事件-------------------------
+        btnDemRecord = (Button) findViewById(R.id.btn_record);
+        btnDemRecord.setOnClickListener(this);//记录经纬数据
+
+        btnDemOutput = (Button) findViewById(R.id.btn_output);
+        btnDemOutput.setOnClickListener(this);//输出经纬数据至文件
+
+        btnHistory = (Button) findViewById(R.id.btn_history);
+        btnHistory.setOnClickListener(this);
+//        btnLoad = (Button) findViewById(R.id.btn_load);
+//        btnLoad.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View view) {
+//                showFileChooser();
+//            }
+//        });
+//
+//        btnPic1 = (Button) findViewById(R.id.btn_pic1);
+//        btnPic1.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View view) {
+//                Intent intent = new Intent(MainActivity.this, Charts1Activity.class);
+//                startActivity(intent);
+//            }
+//        });
+//
+//
+//        btnPic2 = (Button) findViewById(R.id.btn_pic2);
+//        btnPic2.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View view) {
+//                Intent intent = new Intent(MainActivity.this, Charts2Activity.class);
+//                startActivity(intent);
+//            }
+//        });
+//
+//        btnData = (Button) findViewById(R.id.btn_data);
+//        btnData.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View view) {
+//                Intent intent = new Intent(MainActivity.this, Charts3Activity.class);
+//                startActivity(intent);
+//            }
+//        });
+
+
+        btteam = (Button) findViewById(R.id.btn_team);
+        btwaypoint = (Button) findViewById(R.id.btn_waypoint);
+        bthotpoint = (Button) findViewById(R.id.btn_hotpoint);
+        btcserver = (Button) findViewById(R.id.btn_cserver);
+
+        btteam.setOnClickListener(this);
+        btwaypoint.setOnClickListener(this);
+        bthotpoint.setOnClickListener(this);
+        btcserver.setOnClickListener(this);
+
+//        new TimeThread().start(); //启动新的线程
+
+        missioninfo = (TextView) findViewById(R.id.missininfo);
+        btstop = (Button) findViewById(R.id.btn_stop);
+
+        teamnum = 0;
+        teamleader = 0;
+
+        timelist = new ArrayList<>();
+        lnglist = new ArrayList<>();
+        latlist = new ArrayList<>();
+        altlist = new ArrayList<>();
+        yawlist = new ArrayList<>();
+        pitchlist = new ArrayList<>();
+        rolllist = new ArrayList<>();
+
+        uavstate = UAVState.NONE;
+        stopmission = 0;
+
+        clientid = "" + System.currentTimeMillis();
+
+        //可视化设置
+        heightPlot = (XYPlot) findViewById(R.id.height_plot);
+        routePlot = (XYPlot) findViewById(R.id.route_plot);
+        initChartData();
+
+        loadModelFromAssets();
+        scene = new SceneLoader(this);
+        scene.init();
+        if (MyBuildConfig.isDebug) {
+            droneData.loadFakeGPSData();
+        }
+
+    }
+
+    @Override
+    public void onResume() {
+        Log.e(TAG, "onResume");
+        super.onResume();
+    }
+
     @Override
     public void onClick(View v) {
         switch (v.getId()) {
@@ -302,10 +335,71 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
             case R.id.btn_output://输出到文件
 
-                //loginAccount();
-
-                String fileName = "a.txt";//文件名规则？
-                outputGPStoFile(fileName);
+//                if (mFlightController != null) {
+//                    //                // 原地悬停旋转
+//                    mFlightController.setVirtualStickModeEnabled(true, new CommonCallbacks.CompletionCallback() {
+//                        @Override
+//                        public void onResult(DJIError djiError) {
+////                    System.out.println(djiError.getDescription());
+//                        }
+//                    });
+//
+//                    try {
+//                        sleep(5000);
+//                    } catch (InterruptedException e) {
+//                        e.printStackTrace();
+//                    }
+//                    mFlightController.setYawControlMode(YawControlMode.ANGULAR_VELOCITY);
+//
+//                }
+//
+//                if (mFlightController != null && mFlightController.isVirtualStickControlModeAvailable()) {
+//
+//
+//
+//                    new Thread(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            missioninfo.setText("开始执行原地旋转任务!\n" + "旋转速度：" + autorotatew);
+////                            Message msg = new Message();
+////                            msg.what = 1;
+////                            btstophandler.sendMessage(msg);
+//                            uavstate = UAVState.AREXEC;
+//                            while (true){
+//                                if (stopmission == 1){
+//                                    stopmission = 0;
+//                                    missioninfo.setText("");
+////                                    msg.what = 1;
+////                                    btstophandler.sendMessage(msg);
+//                                    uavstate = UAVState.NONE;
+//                                    break;
+//                                }
+//                                try {
+//                                    sleep(100);
+//                                } catch (InterruptedException e) {
+//                                    e.printStackTrace();
+//                                }
+//                                YawControlMode tmpyaw =  mFlightController.getYawControlMode();
+//                                System.out.println(tmpyaw);
+////
+//                                mFlightController.sendVirtualStickFlightControlData(new FlightControlData((float)droneAttitudePitch, (float)droneAttitudeRoll, 5, (float)droneLocationAlt), new CommonCallbacks.CompletionCallback() {
+//                                    @Override
+//                                    public void onResult(DJIError djiError) {
+////                                        System.out.println("++++++++++++++++++++++++++++++++++++++++++++++++++++"+djiError.getDescription());
+//                                    }
+//                                });
+////
+//                            }
+////
+////
+////
+//                        }
+//                    }).start();
+//
+//
+//                }
+//                outputGPStoFile();
+                outputGPStoFile();
                 break;
 
 
@@ -344,8 +438,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
 
             case R.id.btn_stop:
-                initPopupWindowConfirm(1);
-                popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                if (!missioninfo.getText().equals("")) {
+                    initPopupWindowConfirm(1);
+                    popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                }
                 break;
 
             case R.id.btn_history:
@@ -355,72 +451,1328 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    private void initUI() {
-
-        //显示信息
-        tLng = (TextView) findViewById(R.id.textLng);
-        tLat = (TextView) findViewById(R.id.textLat);
-        tAlt = (TextView) findViewById(R.id.textAlt);
-        tPitch = (TextView) findViewById(R.id.textPitch);
-        tRoll = (TextView) findViewById(R.id.textRoll);
-        tYaw = (TextView) findViewById(R.id.textYaw);
-
-        tYaw.setOnClickListener(new View.OnClickListener() {
+    @Override
+    public void onReceiveData(final String data) {
+        runOnUiThread(new Runnable() {
             @Override
-            public void onClick(View view) {
-                testChart();
+            public void run() {
+                System.out.println("*****************************:" + data);
+                if (data.contains("connectsuccess")) {
+                    showToast("连接成功");
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            while (true) {
+                                try {
+                                    sleep(500);
+                                    serverConnector.send(clientid + ",updatedate," + uavstate.statevalue + String.format(",%.4f,%.4f,%.4f,%.4f,%.4f,%.4f", droneLocationLng, droneLocationLat, droneLocationAlt, droneAttitudePitch, droneAttitudeRoll, droneAttitudeYaw));
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
+                    }).start();
+                } else if (data.contains("connecterror")) {
+                    showToast("连接失败");
+                } else if (data.contains("createsuccess")) {
+                    teamnum = Integer.parseInt(data.split(",")[1]);
+                    teamleader = 1;
+                    showToast("创建成功！\n编队号：" + teamnum);
+                } else if (data.contains("joinsuccess")) {
+                    teamnum = Integer.parseInt(data.split(",")[1]);
+                    showToast("加入编队成功");
+                } else if (data.contains("teamnotfound")) {
+                    showToast("加入编队失败");
+                } else if (data.contains("stopsuccess")) {
+                    missioninfo.setText("");
+                } else if (data.contains("finish")) {
+                    missioninfo.setText("");
+                    showToast("执行完毕");
+                } else if (data.contains("wayexec")) {
+                    execwaypointmission();
+                } else if (data.contains("hotexec")) {
+                    exechotpointmission();
+                } else if (data.contains("arexec")) {
+                    execarmission();
+                }
+            }
+        });
+    }
+
+
+    private void outputGPStoFile() {
+        Calendar now = Calendar.getInstance();
+
+        String ftime = "" + now.get(Calendar.YEAR) + '_' + now.get(Calendar.MONTH) + '_' + now.get(Calendar.DAY_OF_MONTH) + '-' + now.get(Calendar.HOUR_OF_DAY) + ':' + now.get(Calendar.MINUTE);
+
+        String state;
+        String path;
+        //获取内部存储根目录
+        File inpath = android.os.Environment.getDataDirectory();
+        //2 确认sdcard的存在
+        state = android.os.Environment.getExternalStorageState();
+        if (state.equals(android.os.Environment.MEDIA_MOUNTED)) {
+            //3 获取扩展存储设备的文件目录
+            path = android.os.Environment.getExternalStorageDirectory().getAbsolutePath();
+            String filefullname = path + "/gpsdata_" + ftime + ".txt";
+
+
+            try {
+                // FileWriter fileWriter = new FileWriter(path+"/gpsdata.txt",true);
+                FileWriter fileWriter = new FileWriter(filefullname, true);
+
+
+                BufferedWriter bw = new BufferedWriter(fileWriter);
+                // 输出坐标数量
+                bw.newLine();
+                bw.write("Time    Lng    Lat    Alt    Yaw    Pitch    Roll");
+                bw.newLine();
+                //遍历集合
+                int len = timelist.size();
+                for (int i = 0; i < len; i++) {
+                    bw.write("" + timelist.get(i));
+                    bw.write("    ");
+                    bw.write("" + lnglist.get(i));
+                    bw.write("    ");
+                    bw.write("" + latlist.get(i));
+                    bw.write("    ");
+                    bw.write("" + altlist.get(i));
+                    bw.write("    ");
+                    bw.write("" + yawlist.get(i));
+                    bw.write("    ");
+                    bw.write("" + pitchlist.get(i));
+                    bw.write("    ");
+                    bw.write("" + rolllist.get(i));
+                    bw.newLine();
+                    bw.flush();
+                }
+                // //释放资源
+                bw.close();
+                fileWriter.close();
+                showToast("File saved successfully!");
+            } catch (IOException e) {
+                e.printStackTrace();
+                Toast.makeText(this, "file is not exist", Toast.LENGTH_SHORT).show();
+            }
+        } else ///没有sd卡 就用手机本身内存
+        {
+            //getFilesDir
+            File sdFie = android.os.Environment.getDataDirectory();
+            path = android.os.Environment.getDataDirectory().getAbsolutePath();//获取手机内存绝对路径
+
+            try {
+                FileWriter fileWriter = new FileWriter(path + "/gpsdata_" + ftime + ".txt", true);
+                BufferedWriter bw = new BufferedWriter(fileWriter);
+                // 输出坐标数量
+                bw.write("");
+                bw.newLine();
+                bw.write("Time    Lng    Lat    Alt    Yaw    Pitch    Roll");
+                bw.newLine();
+                //遍历集合
+                int len = timelist.size();
+                for (int i = 0; i < len; i++) {
+                    bw.write("" + timelist.get(i));
+                    bw.write("    ");
+                    bw.write("" + lnglist.get(i));
+                    bw.write("    ");
+                    bw.write("" + latlist.get(i));
+                    bw.write("    ");
+                    bw.write("" + altlist.get(i));
+                    bw.write("    ");
+                    bw.write("" + yawlist.get(i));
+                    bw.write("    ");
+                    bw.write("" + pitchlist.get(i));
+                    bw.write("    ");
+                    bw.write("" + rolllist.get(i));
+                    bw.newLine();
+                    bw.flush();
+                }
+                // //释放资源
+                bw.close();
+                fileWriter.close();
+                showToast("File saved successfully!");
+            } catch (IOException e) {
+                e.printStackTrace();
+                Toast.makeText(this, "file is not exist", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    public void connectServer(String serverhost, int serverport) throws IOException {
+        serverHandlerThread = new HandlerThread("MainActivity", android.os.Process.THREAD_PRIORITY_BACKGROUND);
+        serverHandlerThread.start();
+        serverHandler = new Handler(serverHandlerThread.getLooper());
+        serverConnector = new ClientConnector(serverhost, serverport);
+        serverConnector.setOnConnectLinstener(this);
+        serverHandler.post(new ConnectRunnable());
+    }
+
+    protected void initPopupWindowCserver() {
+        View v = getLayoutInflater().inflate(R.layout.pop_connectserver, null, false);
+        popupWindowCserver = new PopupWindow(v, 1000, 500, true);
+        popupWindowCserver.setFocusable(true);
+
+        popupWindowCserver.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
+        popupWindowCserver.setBackgroundDrawable(new BitmapDrawable());
+
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.alpha = 0.5f;//设置阴影透明度
+        getWindow().setAttributes(lp);
+        popupWindowCserver.setOnDismissListener(new PopupWindow.OnDismissListener() {
+
+            @Override
+            public void onDismiss() {
+                WindowManager.LayoutParams lp = getWindow().getAttributes();
+                lp.alpha = 1f;
+                getWindow().setAttributes(lp);
             }
         });
 
-        // ---------------设置单击事件-------------------------
-        //  private Button btnDemRecord;//记录经纬数据
-        // private Button btnDemOutput;//输出经纬数据至文件
-        btnDemRecord = (Button) findViewById(R.id.btn_record);
-        btnDemRecord.setOnClickListener(this);//记录经纬数据
-
-        btnDemOutput = (Button) findViewById(R.id.btn_output);
-        btnDemOutput.setOnClickListener(this);//输出经纬数据至文件
-
-        btnHistory = (Button) findViewById(R.id.btn_history);
-        btnHistory.setOnClickListener(this);
+        /* pop.xml视图里面的控件 */
+        Button btyes = (Button) v.findViewById(R.id.bt_yes);
+        Button btno = (Button) v.findViewById(R.id.bt_no);
+        final TextView txtaddr = (TextView) v.findViewById(R.id.etip);
 
 
-        btteam = (Button) findViewById(R.id.btn_team);
-        btwaypoint = (Button) findViewById(R.id.btn_waypoint);
-        bthotpoint = (Button) findViewById(R.id.btn_hotpoint);
-        btcserver = (Button) findViewById(R.id.btn_cserver);
+        btyes.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                popupWindowCserver.dismiss();
+                String addr = txtaddr.getText().toString();
+                if (addr.contains(":")) {
+                    try {
+                        serverhost = addr.split(":")[0];
+                        serverport = Integer.parseInt(addr.split(":")[1]);
+                        connectServer(serverhost, serverport);
+                        sleep(3000);
+                        serverConnector.send("#" + clientid);
 
-        btteam.setOnClickListener(this);
-        btwaypoint.setOnClickListener(this);
-        bthotpoint.setOnClickListener(this);
-        btcserver.setOnClickListener(this);
+                    } catch (Exception e) {
+                        showToast("连接失败");
+                    }
+                } else {
+                    showToast("连接失败");
+                }
+            }
+        });
 
-//        new TimeThread().start(); //启动新的线程
+        btno.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                popupWindowCserver.dismiss();
+            }
+        });
+    }
 
-        missioninfo = (TextView) findViewById(R.id.missininfo);
-        btstop = (Button) findViewById(R.id.btn_stop);
+    protected void initPopupWindowJointeam() {
+        View v = getLayoutInflater().inflate(R.layout.pop_jointeam, null, false);
+        popupWindowJointeam = new PopupWindow(v, 1000, 500, true);
+        popupWindowJointeam.setFocusable(true);
 
-        teamnum = 0;
-        teamleader = 0;
+        popupWindowJointeam.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
+        popupWindowJointeam.setBackgroundDrawable(new BitmapDrawable());
 
-        timelist = new ArrayList<>();
-        lnglist = new ArrayList<>();
-        latlist = new ArrayList<>();
-        altlist = new ArrayList<>();
-        yawlist = new ArrayList<>();
-        pitchlist = new ArrayList<>();
-        rolllist = new ArrayList<>();
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.alpha = 0.5f;//设置阴影透明度
+        getWindow().setAttributes(lp);
+        popupWindowJointeam.setOnDismissListener(new PopupWindow.OnDismissListener() {
 
-        //可视化设置
-        heightPlot = (XYPlot) findViewById(R.id.height_plot);
-        routePlot = (XYPlot) findViewById(R.id.route_plot);
-        initChartData();
+            @Override
+            public void onDismiss() {
+                WindowManager.LayoutParams lp = getWindow().getAttributes();
+                lp.alpha = 1f;
+                getWindow().setAttributes(lp);
+            }
+        });
 
-        loadModelFromAssets();
-        scene = new SceneLoader(this);
-        scene.init();
-        if (MyBuildConfig.isDebug) {
-            droneData.loadFakeGPSData();
+        /* pop.xml视图里面的控件 */
+        Button btyes = (Button) v.findViewById(R.id.bt_yes);
+        Button btno = (Button) v.findViewById(R.id.bt_no);
+        final TextView etnum = (TextView) v.findViewById(R.id.etnum);
+
+        btyes.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                popupWindowJointeam.dismiss();
+
+                try {
+                    serverConnector.send(clientid + ",jointeam," + etnum.getText().toString());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    showToast("加入编队失败");
+                }
+
+            }
+        });
+
+        btno.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                popupWindowJointeam.dismiss();
+            }
+        });
+    }
+
+    protected void execwaypointmission() {
+        // 航点飞行任务
+
+        WaypointMission waypointMission = null;
+        WaypointMission.Builder builder = new WaypointMission.Builder();
+        builder.autoFlightSpeed(4);
+//        builder.autoFlightSpeed(wayvel);
+        builder.maxFlightSpeed(10f);
+        builder.setExitMissionOnRCSignalLostEnabled(false);
+        builder.finishedAction(WaypointMissionFinishedAction.NO_ACTION);
+        builder.flightPathMode(WaypointMissionFlightPathMode.NORMAL);
+        builder.gotoFirstWaypointMode(WaypointMissionGotoWaypointMode.SAFELY);
+        builder.headingMode(WaypointMissionHeadingMode.AUTO);
+        builder.repeatTimes(1);
+        List<Waypoint> waypointList = new ArrayList<>();
+        Object latitudeValue = KeyManager.getInstance().getValue((FlightControllerKey.create(HOME_LOCATION_LATITUDE)));
+        Object longitudeValue = KeyManager.getInstance().getValue((FlightControllerKey.create(HOME_LOCATION_LONGITUDE)));
+        waypointList.add(new Waypoint((double) latitudeValue, (double) longitudeValue, 25));
+        waypointList.add(new Waypoint(40.4903, 111.3899, 25));
+//        waypointList.add(new Waypoint((double)latitudeValue, (double)longitudeValue, wayalt));
+//        waypointList.add(new Waypoint(waylat, waylng, wayalt));
+        builder.waypointList(waypointList).waypointCount(waypointList.size());
+        waypointMission = builder.build();
+        DJIError djiError = waypointMissionOperator.loadMission(waypointMission);
+        showResultToast(djiError);
+        waypointMissionOperator.uploadMission(new CommonCallbacks.CompletionCallback() {
+            @Override
+            public void onResult(DJIError djiError) {
+                showResultToast(djiError);
+            }
+        });
+        try {
+            sleep(5000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        waypointMissionOperator.startMission(new CommonCallbacks.CompletionCallback() {
+            @Override
+            public void onResult(DJIError djiError) {
+                showResultToast(djiError);
+            }
+        });
+    }
+
+    protected void exechotpointmission() {
+        // 圆形绕飞
+        HotpointMission hotpointMission = new HotpointMission();
+        hotpointMission.setHotpoint(new LocationCoordinate2D(hotlat, hotlng));
+        hotpointMission.setAltitude(hotalt);
+        hotpointMission.setRadius(hotr);
+        hotpointMission.setAngularVelocity(hotw);
+        HotpointStartPoint startPoint;
+        if (hotstart == "east") startPoint = HotpointStartPoint.EAST;
+        else if (hotstart == "south") startPoint = HotpointStartPoint.SOUTH;
+        else if (hotstart == "west") startPoint = HotpointStartPoint.WEST;
+        else if (hotstart == "north") startPoint = HotpointStartPoint.NORTH;
+        else startPoint = HotpointStartPoint.NEAREST;
+        hotpointMission.setStartPoint(startPoint);
+        HotpointHeading heading = HotpointHeading.TOWARDS_HOT_POINT;
+        hotpointMission.setHeading(heading);
+        hotpointMissionOperator.startMission(hotpointMission, new CommonCallbacks.CompletionCallback() {
+            @Override
+            public void onResult(DJIError djiError) {
+                showResultToast(djiError);
+            }
+        });
+    }
+
+    protected void execarmission() {
+
+        if (mFlightController != null) {
+            //                // 原地悬停旋转
+            mFlightController.setVirtualStickModeEnabled(true, new CommonCallbacks.CompletionCallback() {
+                @Override
+                public void onResult(DJIError djiError) {
+//                    System.out.println(djiError.getDescription());
+                }
+            });
+
+            try {
+                sleep(5000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            mFlightController.setYawControlMode(YawControlMode.ANGULAR_VELOCITY);
+
+        }
+
+        if (mFlightController != null && mFlightController.isVirtualStickControlModeAvailable()) {
+
+
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    missioninfo.setText("开始执行原地旋转任务!\n" + "旋转速度：" + autorotatew);
+                    uavstate = UAVState.AREXEC;
+                    showToast("Execution started!");
+
+                    while (true) {
+                        if (stopmission == 1) {
+                            stopmission = 0;
+                            missioninfo.setText("");
+                            uavstate = UAVState.NONE;
+                            showToast("Execution finished!");
+
+                            break;
+                        }
+                        try {
+                            sleep(100);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+//                                YawControlMode tmpyaw =  mFlightController.getYawControlMode();
+//                                System.out.println(tmpyaw);
+//
+                        mFlightController.sendVirtualStickFlightControlData(new FlightControlData((float) droneAttitudePitch, (float) droneAttitudeRoll, 5, (float) droneLocationAlt), new CommonCallbacks.CompletionCallback() {
+                            @Override
+                            public void onResult(DJIError djiError) {
+//                                        System.out.println("++++++++++++++++++++++++++++++++++++++++++++++++++++"+djiError.getDescription());
+                            }
+                        });
+//
+                    }
+//
+//
+//
+                }
+            }).start();
+
+
+        }
+    }
+
+    protected void initPopupWindowConfirm(final int type) {
+        View v = getLayoutInflater().inflate(R.layout.pop_confirm, null, false);
+        popupWindowCon = new PopupWindow(v, 1000, 500, true);
+        popupWindowCon.setFocusable(true);
+
+        popupWindowCon.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
+        popupWindowCon.setBackgroundDrawable(new BitmapDrawable());
+
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.alpha = 0.5f;//设置阴影透明度
+        getWindow().setAttributes(lp);
+        popupWindowCon.setOnDismissListener(new PopupWindow.OnDismissListener() {
+
+            @Override
+            public void onDismiss() {
+                WindowManager.LayoutParams lp = getWindow().getAttributes();
+                lp.alpha = 1f;
+                getWindow().setAttributes(lp);
+            }
+        });
+
+        /* pop.xml视图里面的控件 */
+        Button btyes = (Button) v.findViewById(R.id.bt_yes);
+        Button btno = (Button) v.findViewById(R.id.bt_no);
+        TextView txtcontitle = (TextView) v.findViewById(R.id.txt_contitle);
+
+        if (type == 21 || type == 31 || type == 51) txtcontitle.setText("保存配置并等待编队命令");
+        else if (type == 1) {
+            txtcontitle.setText("中止执行任务");
+        }
+
+        //可视化
+        if (type == 31) {
+            addCircle(new Point(hotlng, hotlat), hotr);
+        }
+
+        btyes.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+//                String str;
+//                String res;
+                popupWindowCon.dismiss();
+
+                try {
+                    if (type == 1) {
+                        if (uavstate == UAVState.WAYEXEC) {
+                            waypointMissionOperator.stopMission(new CommonCallbacks.CompletionCallback() {
+                                @Override
+                                public void onResult(DJIError djiError) {
+                                    showResultToast(djiError);
+                                }
+                            });
+                        } else if (uavstate == UAVState.HOTEXEC) {
+                            hotpointMissionOperator.stop(new CommonCallbacks.CompletionCallback() {
+                                @Override
+                                public void onResult(DJIError djiError) {
+                                    showResultToast(djiError);
+                                }
+                            });
+                        } else if (uavstate == UAVState.ROTATEEXEC || uavstate == UAVState.AREXEC) {
+                            stopmission = 1;
+                        } else {
+                            missioninfo.setText("");
+                        }
+                    } else if (type / 10 == 2) {
+                        popupWindowWay.dismiss();
+                        if (type == 22) {
+                            execwaypointmission();
+                        } else {
+                            uavstate = UAVState.WAYSAVE;
+                            sleep(500);
+
+                            if (teamleader == 1) {
+                                serverConnector.send(clientid + ",execall," + teamnum);
+                            } else {
+                                missioninfo.setText("已保存航点飞行任务，等待编队执行命令。\n" + "经度：" + waylng + " 纬度：" + waylat + " 高度：" + wayalt + " 速度：" + wayvel);
+                            }
+                        }
+                    } else if (type / 10 == 3) {
+                        popupWindowHot.dismiss();
+                        if (type == 32) {
+                            exechotpointmission();
+                        } else {
+                            uavstate = UAVState.HOTSAVE;
+                            sleep(500);
+
+                            if (teamleader == 1) serverConnector.send(clientid + ",execall," + teamnum);
+                            else {
+                                missioninfo.setText("已保存圆周飞行任务，等待编队执行命令。\n" + "圆心经度：" + hotlng + " 圆心纬度：" + hotlat + " 圆心高度：" + hotalt + " 绕飞半径：" + hotr + " 角速度：" + hotw + " 起始方向：" + hotstart);
+                            }
+                        }
+
+                    } else if (type / 10 == 4) {
+                        popupWindowRotate.dismiss();
+
+                        final float rotatedir = (type - 40) * 90 - 180;
+
+
+                        if (mFlightController != null) {
+                            //                // 原地悬停旋转
+                            mFlightController.setVirtualStickModeEnabled(true, new CommonCallbacks.CompletionCallback() {
+                                @Override
+                                public void onResult(DJIError djiError) {
+//                    System.out.println(djiError.getDescription());
+                                }
+                            });
+
+                            try {
+                                sleep(5000);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                            mFlightController.setYawControlMode(YawControlMode.ANGLE);
+
+                        }
+
+                        if (mFlightController != null && mFlightController.isVirtualStickControlModeAvailable()) {
+
+
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    String dir[] = {"西", "北", "东", "南"};
+                                    missioninfo.setText("开始执行无人机转向任务！\n机头转向：" + dir[type - 41]);
+                                    uavstate = UAVState.ROTATEEXEC;
+                                    showToast("Execution started!");
+
+                                    while (Math.abs(rotatedir - droneAttitudeYaw) > 0.1) {
+                                        if (stopmission == 1) {
+                                            break;
+                                        }
+                                        try {
+                                            sleep(100);
+                                        } catch (InterruptedException e) {
+                                            e.printStackTrace();
+                                        }
+//                                YawControlMode tmpyaw =  mFlightController.getYawControlMode();
+//                                System.out.println(tmpyaw);
+//
+                                        mFlightController.sendVirtualStickFlightControlData(new FlightControlData((float) droneAttitudePitch, (float) droneAttitudeRoll, rotatedir, (float) droneLocationAlt), new CommonCallbacks.CompletionCallback() {
+                                            @Override
+                                            public void onResult(DJIError djiError) {
+//                                                showResultToast(djiError);
+                                            }
+                                        });
+//
+                                    }
+                                    stopmission = 0;
+                                    missioninfo.setText("");
+                                    uavstate = UAVState.NONE;
+                                    showToast("Execution finished!");
+//
+//
+//
+                                }
+                            }).start();
+
+
+                        }
+
+
+//                        if (mFlightController != null && mFlightController.isVirtualStickControlModeAvailable()) {
+//                            new Thread(new Runnable() {
+//                                @Override
+//                                public void run() {
+//                                    while (Math.abs(rotatedir - droneAttitudeYaw) > 1e-4){
+//                                        if (stopmission == 1){
+//                                            stopmission = 0;
+//                                            missioninfo.setText("");
+////                                            msg.what = 0;
+////                                            btstophandler.sendMessage(msg);
+//                                            uavstate = UAVState.NONE;
+//                                            break;
+//                                        }
+//
+//                                        try {
+//                                            sleep(100);
+//                                        } catch (InterruptedException e) {
+//                                            e.printStackTrace();
+//                                        }
+//                                        new Thread(new Runnable() {
+//                                            @Override
+//                                            public void run() {
+//                                                mFlightController.sendVirtualStickFlightControlData(new FlightControlData((float)droneAttitudePitch, (float)droneAttitudeRoll, rotatedir, (float)droneLocationAlt), new CommonCallbacks.CompletionCallback() {
+//                                                    @Override
+//                                                    public void onResult(DJIError djiError) {
+//                                                        showResultToast(djiError);
+//                                                    }
+//                                                });
+//                                            }
+//                                        }).start();
+//                                    }
+//                                }
+//                            }).start();
+//                        }
+
+                    } else if (type / 10 == 5) {
+                        popupWindowAutorotate.dismiss();
+                        if (type == 52) {
+                            execarmission();
+                        } else {
+                            uavstate = UAVState.ARSAVE;
+                            sleep(500);
+
+                            if (teamleader == 1) {
+                                serverConnector.send(clientid + ",execall," + teamnum);
+                            } else {
+                                missioninfo.setText("已保存原地旋转任务，等待编队执行命令。\n" + "旋转速度：" + autorotatew);
+                            }
+                        }
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    showToast("失败");
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        btno.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                popupWindowCon.dismiss();
+            }
+        });
+    }
+
+    protected void initPopupWindowTeam() {
+        /* TODO Auto-generated method stub */
+
+        /* 获取自定义布局文件pop.xml的视图 */
+        View popupWindow_view = getLayoutInflater().inflate(R.layout.pop_team, null,
+                false);
+        /* 创建PopupWindow实例,200,150分别是宽度和高度 */
+        popupWindowTeam = new PopupWindow(popupWindow_view, 600, 600, true);
+
+        popupWindowTeam.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
+        popupWindowTeam.setBackgroundDrawable(new BitmapDrawable());
+
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.alpha = 0.5f;//设置阴影透明度
+        getWindow().setAttributes(lp);
+        popupWindowTeam.setOnDismissListener(new PopupWindow.OnDismissListener() {
+
+            @Override
+            public void onDismiss() {
+                WindowManager.LayoutParams lp = getWindow().getAttributes();
+                lp.alpha = 1f;
+                getWindow().setAttributes(lp);
+            }
+        });
+
+        /* pop.xml视图里面的控件 */
+        Button btcteam = (Button) popupWindow_view.findViewById(R.id.create_team);
+        Button btjteam = (Button) popupWindow_view.findViewById(R.id.join_team);
+        Button btqteam = (Button) popupWindow_view.findViewById(R.id.quit_team);
+        TextView txtteamstate = (TextView) popupWindow_view.findViewById(R.id.team_state);
+
+        if (teamnum != 0) {
+            txtteamstate.setText("编队号：" + teamnum);
+            btcteam.setEnabled(false);
+            btjteam.setEnabled(false);
+        } else {
+            btqteam.setEnabled(false);
+        }
+
+        btcteam.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    serverConnector.send(clientid + ",createteam," + System.currentTimeMillis() % 1000);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                popupWindowTeam.dismiss();
+
+            }
+        });
+
+        btjteam.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                popupWindowTeam.dismiss();
+                initPopupWindowJointeam();
+                popupWindowJointeam.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+            }
+        });
+
+        btqteam.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                teamleader = 0;
+                teamnum = 0;
+                popupWindowTeam.dismiss();
+            }
+        });
+
+    }
+
+    protected void initPopupWindowWay() {
+        View popupWindow_view = getLayoutInflater().inflate(R.layout.pop_way, null,
+                false);
+        /* 创建PopupWindow实例,200,150分别是宽度和高度 */
+        popupWindowWay = new PopupWindow(popupWindow_view, 1000, 1200, true);
+
+        popupWindowWay.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
+        popupWindowWay.setBackgroundDrawable(new BitmapDrawable());
+
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.alpha = 0.5f;//设置阴影透明度
+        getWindow().setAttributes(lp);
+        popupWindowWay.setOnDismissListener(new PopupWindow.OnDismissListener() {
+
+            @Override
+            public void onDismiss() {
+                WindowManager.LayoutParams lp = getWindow().getAttributes();
+                lp.alpha = 1f;
+                getWindow().setAttributes(lp);
+            }
+        });
+
+        /* pop.xml视图里面的控件 */
+        Button bttwgo = (Button) popupWindow_view.findViewById(R.id.bt_twgo);
+        Button btwgo = (Button) popupWindow_view.findViewById(R.id.bt_wgo);
+        final EditText etlng = (EditText) popupWindow_view.findViewById(R.id.et_lng);
+        final EditText etlat = (EditText) popupWindow_view.findViewById(R.id.et_lat);
+        final EditText etalt = (EditText) popupWindow_view.findViewById(R.id.et_alt);
+        final EditText etvel = (EditText) popupWindow_view.findViewById(R.id.et_vel);
+
+
+        if (teamnum == 0) {
+            bttwgo.setEnabled(false);
+        } else {
+            if (teamleader == 0) {
+                bttwgo.setText("保存配置");
+            }
+        }
+
+        bttwgo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    wayalt = Float.parseFloat(etalt.getText().toString());
+                    waylat = Double.parseDouble(etlat.getText().toString());
+                    waylng = Double.parseDouble(etlng.getText().toString());
+                    wayvel = Float.parseFloat(etvel.getText().toString());
+                    initPopupWindowConfirm(21);
+                    popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+
+                } catch (Exception e) {
+                    showToast("参数不合法");
+                }
+
+            }
+        });
+
+        btwgo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    wayalt = Float.parseFloat(etalt.getText().toString());
+                    waylat = Double.parseDouble(etlat.getText().toString());
+                    waylng = Double.parseDouble(etlng.getText().toString());
+                    wayvel = Float.parseFloat(etvel.getText().toString());
+                    initPopupWindowConfirm(22);
+                    popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                } catch (Exception e) {
+                    showToast("参数不合法");
+                }
+            }
+        });
+
+    }
+
+    protected void initPopupWindowHot() {
+        View popupWindow_view = getLayoutInflater().inflate(R.layout.pop_hot, null,
+                false);
+        /* 创建PopupWindow实例,200,150分别是宽度和高度 */
+        popupWindowHot = new PopupWindow(popupWindow_view, 1000, 1400, true);
+
+        popupWindowHot.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
+        popupWindowHot.setBackgroundDrawable(new BitmapDrawable());
+
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.alpha = 0.5f;//设置阴影透明度
+        getWindow().setAttributes(lp);
+        popupWindowHot.setOnDismissListener(new PopupWindow.OnDismissListener() {
+
+            @Override
+            public void onDismiss() {
+                WindowManager.LayoutParams lp = getWindow().getAttributes();
+                lp.alpha = 1f;
+                getWindow().setAttributes(lp);
+            }
+        });
+
+        /* pop.xml视图里面的控件 */
+        Button btthgo = (Button) popupWindow_view.findViewById(R.id.bt_thgo);
+        Button bthgo = (Button) popupWindow_view.findViewById(R.id.bt_hgo);
+        final EditText etlng = (EditText) popupWindow_view.findViewById(R.id.et_lng);
+        final EditText etlat = (EditText) popupWindow_view.findViewById(R.id.et_lat);
+        final EditText etalt = (EditText) popupWindow_view.findViewById(R.id.et_alt);
+        final EditText etw = (EditText) popupWindow_view.findViewById(R.id.et_w);
+        final EditText etr = (EditText) popupWindow_view.findViewById(R.id.et_r);
+        final Spinner spstart = (Spinner) popupWindow_view.findViewById(R.id.sp_start);
+
+        if (teamnum == 0) {
+            btthgo.setEnabled(false);
+        } else {
+            if (teamleader == 0) {
+                btthgo.setText("保存配置");
+            }
+        }
+
+        btthgo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    hotalt = Double.parseDouble(etalt.getText().toString());
+                    hotlat = Double.parseDouble(etlat.getText().toString());
+                    hotlng = Double.parseDouble(etlng.getText().toString());
+                    hotw = Float.parseFloat(etw.getText().toString());
+                    hotr = Double.parseDouble(etr.getText().toString());
+                    String tmp = spstart.getSelectedItem().toString();
+                    if (tmp.contains("东")) hotstart = "east";
+                    else if (tmp.contains("南")) hotstart = "south";
+                    else if (tmp.contains("西")) hotstart = "west";
+                    else if (tmp.contains("北")) hotstart = "north";
+                    initPopupWindowConfirm(31);
+                    popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                } catch (Exception e) {
+                    showToast("参数不合法");
+                }
+
+
+            }
+        });
+
+        bthgo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    hotalt = Double.parseDouble(etalt.getText().toString());
+                    hotlat = Double.parseDouble(etlat.getText().toString());
+                    hotlng = Double.parseDouble(etlng.getText().toString());
+                    hotw = Float.parseFloat(etw.getText().toString());
+                    hotr = Double.parseDouble(etr.getText().toString());
+                    String tmp = spstart.getSelectedItem().toString();
+                    if (tmp.contains("东")) hotstart = "east";
+                    else if (tmp.contains("南")) hotstart = "south";
+                    else if (tmp.contains("西")) hotstart = "west";
+                    else if (tmp.contains("北")) hotstart = "north";
+                    initPopupWindowConfirm(32);
+                    popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                } catch (Exception e) {
+                    showToast("参数不合法");
+                }
+
+
+            }
+        });
+
+    }
+
+    protected void initPopupWindowRotate() {
+        /* TODO Auto-generated method stub */
+
+        /* 获取自定义布局文件pop.xml的视图 */
+        View popupWindow_view = getLayoutInflater().inflate(R.layout.pop_rotate, null,
+                false);
+        /* 创建PopupWindow实例,200,150分别是宽度和高度 */
+        popupWindowRotate = new PopupWindow(popupWindow_view, 500, 800, true);
+
+        popupWindowRotate.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
+        popupWindowRotate.setBackgroundDrawable(new BitmapDrawable());
+
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.alpha = 0.5f;//设置阴影透明度
+        getWindow().setAttributes(lp);
+        popupWindowRotate.setOnDismissListener(new PopupWindow.OnDismissListener() {
+
+            @Override
+            public void onDismiss() {
+                WindowManager.LayoutParams lp = getWindow().getAttributes();
+                lp.alpha = 1f;
+                getWindow().setAttributes(lp);
+            }
+        });
+
+        /* pop.xml视图里面的控件 */
+        Button bteast = (Button) popupWindow_view.findViewById(R.id.bt_east);
+        Button btwest = (Button) popupWindow_view.findViewById(R.id.bt_west);
+        Button btnorth = (Button) popupWindow_view.findViewById(R.id.bt_north);
+        Button btsouth = (Button) popupWindow_view.findViewById(R.id.bt_south);
+
+
+        bteast.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                initPopupWindowConfirm(43);
+                popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+            }
+        });
+
+        btwest.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                initPopupWindowConfirm(41);
+                popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+
+            }
+        });
+
+        btnorth.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                initPopupWindowConfirm(42);
+                popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+
+            }
+        });
+
+        btsouth.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                initPopupWindowConfirm(44);
+                popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+
+            }
+        });
+
+    }
+
+    protected void initPopupWindowAutorotate() {
+        /* TODO Auto-generated method stub */
+
+        /* 获取自定义布局文件pop.xml的视图 */
+        View popupWindow_view = getLayoutInflater().inflate(R.layout.pop_autorotate, null,
+                false);
+        /* 创建PopupWindow实例,200,150分别是宽度和高度 */
+        popupWindowAutorotate = new PopupWindow(popupWindow_view, 1000, 600, true);
+
+        popupWindowAutorotate.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
+        popupWindowAutorotate.setBackgroundDrawable(new BitmapDrawable());
+
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.alpha = 0.5f;//设置阴影透明度
+        getWindow().setAttributes(lp);
+        popupWindowAutorotate.setOnDismissListener(new PopupWindow.OnDismissListener() {
+
+            @Override
+            public void onDismiss() {
+                WindowManager.LayoutParams lp = getWindow().getAttributes();
+                lp.alpha = 1f;
+                getWindow().setAttributes(lp);
+            }
+        });
+
+        /* pop.xml视图里面的控件 */
+        Button bttargo = (Button) popupWindow_view.findViewById(R.id.bt_targo);
+        Button btargo = (Button) popupWindow_view.findViewById(R.id.bt_argo);
+        final EditText etw = (EditText) popupWindow_view.findViewById(R.id.et_w);
+
+        if (teamnum == 0) {
+            bttargo.setEnabled(false);
+        } else {
+            if (teamleader == 0) {
+                bttargo.setText("保存配置");
+            }
+        }
+
+        bttargo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    autorotatew = Float.parseFloat(etw.getText().toString());
+                    initPopupWindowConfirm(51);
+                    popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                } catch (Exception e) {
+                    showToast("参数不合法");
+                }
+
+            }
+        });
+
+        btargo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    autorotatew = Float.parseFloat(etw.getText().toString());
+                    initPopupWindowConfirm(52);
+                    popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
+                } catch (Exception e) {
+                    showToast("参数不合法");
+                }
+
+            }
+        });
+
+    }
+
+    private void initFlightController() {
+        final Calendar now = Calendar.getInstance();
+
+
+        if (isFlightControllerSupported()) {
+            mFlightController = ((Aircraft) DJISDKManager.getInstance().getProduct()).getFlightController();
+            mFlightController.setStateCallback(new FlightControllerState.Callback() {
+                @Override
+                public void onUpdate(FlightControllerState
+                                             djiFlightControllerCurrentState) {
+
+                    droneLocationLat = djiFlightControllerCurrentState.getAircraftLocation().getLatitude();
+                    droneLocationLng = djiFlightControllerCurrentState.getAircraftLocation().getLongitude();
+
+                    //更新飞控数据
+                    droneLocationAlt = djiFlightControllerCurrentState.getAircraftLocation().getAltitude();
+                    droneAttitudePitch = djiFlightControllerCurrentState.getAttitude().pitch;
+                    droneAttitudeRoll = djiFlightControllerCurrentState.getAttitude().roll;
+                    droneAttitudeYaw = djiFlightControllerCurrentState.getAttitude().yaw;
+                    droneTime = "" + now.get(Calendar.YEAR) + '_' + now.get(Calendar.MONTH) + '_' + now.get(Calendar.DAY_OF_MONTH) + '-' + now.get(Calendar.HOUR_OF_DAY) + ':' + now.get(Calendar.MINUTE) + ':' + now.get(Calendar.SECOND);
+
+                    tLng.setText(String.valueOf(droneLocationLng));
+                    lnglist.add(String.valueOf(droneLocationLng));
+                    tLat.setText(String.valueOf(droneLocationLat));
+                    latlist.add(String.valueOf(droneLocationLat));
+                    tAlt.setText(String.valueOf(droneLocationAlt));
+                    altlist.add(String.valueOf(droneLocationAlt));
+                    tYaw.setText(String.valueOf(droneAttitudeYaw));
+                    yawlist.add(String.valueOf(droneAttitudeYaw));
+                    tPitch.setText(String.valueOf(droneAttitudePitch));
+                    pitchlist.add(String.valueOf(droneAttitudePitch));
+                    tRoll.setText(String.valueOf(droneAttitudeRoll));
+                    rolllist.add(String.valueOf(droneAttitudeRoll));
+                    SimpleDateFormat df = new SimpleDateFormat("yyyy/MM/dd-HH:mm:ss:SSS");//设置日期格式
+                    timelist.add(df.format(new Date()));
+
+                    //可视化
+                    addChartPoint(new Point(droneLocationLng, droneLocationLat), droneAttitudeYaw, droneLocationAlt);
+                    rotateModel(droneAttitudeYaw, droneAttitudePitch, droneAttitudeRoll);
+                }
+            });
+
+
+            if (waypointMissionOperator == null) {
+                waypointMissionOperator = MissionControl.getInstance().getWaypointMissionOperator();
+                setUpWaypointListener();
+            }
+
+            if (hotpointMissionOperator == null) {
+                hotpointMissionOperator = MissionControl.getInstance().getHotpointMissionOperator();
+                setUpHotpointListener();
+            }
+        }
+    }
+
+    private boolean isFlightControllerSupported() {
+        return DJISDKManager.getInstance().getProduct() != null &&
+                DJISDKManager.getInstance().getProduct() instanceof Aircraft &&
+                ((Aircraft) DJISDKManager.getInstance().getProduct()).getFlightController() != null;
+    }
+
+    /**
+     * Checks if there is any missing permissions, and
+     * requests runtime permission if needed.
+     */
+    private void checkAndRequestPermissions() {
+        // Check for permissions
+        for (String eachPermission : REQUIRED_PERMISSION_LIST) {
+            if (ContextCompat.checkSelfPermission(this, eachPermission) != PackageManager.PERMISSION_GRANTED) {
+                missingPermission.add(eachPermission);
+            }
+        }
+        // Request for missing permissions
+        if (missingPermission.isEmpty()) {
+            startSDKRegistration();
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            showToast("Need to grant the permissions!");
+            ActivityCompat.requestPermissions(this,
+                    missingPermission.toArray(new String[missingPermission.size()]),
+                    REQUEST_PERMISSION_CODE);
+        }
+
+    }
+
+    /**
+     * Result of runtime permission request
+     */
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        // Check for granted permission and remove from missing list
+        if (requestCode == REQUEST_PERMISSION_CODE) {
+            for (int i = grantResults.length - 1; i >= 0; i--) {
+                if (grantResults[i] == PackageManager.PERMISSION_GRANTED) {
+                    missingPermission.remove(permissions[i]);
+                }
+            }
+        }
+        // If there is enough permission, we will start the registration
+        if (missingPermission.isEmpty()) {
+            startSDKRegistration();
+        } else {
+            showToast("Missing permissions!!!");
+        }
+    }
+
+    private void startSDKRegistration() {
+        if (isRegistrationInProgress.compareAndSet(false, true)) {
+            AsyncTask.execute(new Runnable() {
+                @Override
+                public void run() {
+                    showToast("registering, pls wait...");
+                    DJISDKManager.getInstance().registerApp(MainActivity.this.getApplicationContext(), new DJISDKManager.SDKManagerCallback() {
+                        @Override
+                        public void onRegister(DJIError djiError) {
+                            if (djiError == DJISDKError.REGISTRATION_SUCCESS) {
+                                showToast("Register Success");
+                                DJISDKManager.getInstance().startConnectionToProduct();
+                            } else {
+                                showToast("Register sdk fails, please check the bundle id and network connection!");
+                            }
+                            Log.v(TAG, djiError.getDescription());
+                        }
+
+                        @Override
+                        public void onProductDisconnect() {
+                            tearDownWaypointListener();
+                            tearDownHotpointListener();
+                            Log.d(TAG, "onProductDisconnect");
+                            showToast("Product Disconnected");
+                            notifyStatusChange();
+                            connectstate.setText("disconnected");
+                        }
+
+                        @Override
+                        public void onProductConnect(BaseProduct baseProduct) {
+                            Log.d(TAG, String.format("onProductConnect newProduct:%s", baseProduct));
+                            showToast("Product Connected");
+                            notifyStatusChange();
+                            connectstate.setText("connected");
+                            initFlightController();
+                        }
+
+                        @Override
+                        public void onComponentChange(BaseProduct.ComponentKey componentKey, BaseComponent oldComponent,
+                                                      BaseComponent newComponent) {
+
+                            if (newComponent != null) {
+                                newComponent.setComponentListener(new BaseComponent.ComponentListener() {
+
+                                    @Override
+                                    public void onConnectivityChange(boolean isConnected) {
+                                        Log.d(TAG, "onComponentConnectivityChanged: " + isConnected);
+                                        notifyStatusChange();
+                                    }
+                                });
+                            }
+                            Log.d(TAG,
+                                    String.format("onComponentChange key:%s, oldComponent:%s, newComponent:%s",
+                                            componentKey,
+                                            oldComponent,
+                                            newComponent));
+
+                        }
+
+                    });
+                }
+            });
+        }
+    }
+
+    private void notifyStatusChange() {
+        mHandler.removeCallbacks(updateRunnable);
+        mHandler.postDelayed(updateRunnable, 500);
+    }
+
+    private void showToast(final String toastMsg) {
+
+        Handler handler = new Handler(Looper.getMainLooper());
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(getApplicationContext(), toastMsg, Toast.LENGTH_LONG).show();
+            }
+        });
+
+    }
+
+    private void showResultToast(DJIError djiError) {
+        if (djiError != null) showToast(djiError.getDescription());
+    }
+
+    private void setUpHotpointListener() {
+        hotpointlistener = new HotpointMissionOperatorListener() {
+            @Override
+            public void onExecutionUpdate(@NonNull HotpointMissionEvent hotpointMissionEvent) {
+//                showToast("Execution update!");
+            }
+
+            @Override
+            public void onExecutionStart() {
+                showToast("Execution started!");
+                missioninfo.setText("开始执行圆形飞行任务！\n圆心经度：" + hotlng + " 圆心纬度：" + hotlat + " 圆心高度：" + hotalt + " 绕飞半径：" + hotr + " 角速度：" + hotw + " 起始方向：" + hotstart);
+
+                uavstate = UAVState.HOTEXEC;
+            }
+
+            @Override
+            public void onExecutionFinish(@Nullable DJIError djiError) {
+                showToast("Execution finished!");
+                missioninfo.setText("");
+                uavstate = UAVState.NONE;
+            }
+        };
+
+        if (hotpointMissionOperator != null && hotpointlistener != null) {
+            hotpointMissionOperator.addListener(hotpointlistener);
+        }
+    }
+
+    private void setUpWaypointListener() {
+        // Example of Listener
+        waypointListener = new WaypointMissionOperatorListener() {
+            @Override
+            public void onDownloadUpdate(@NonNull WaypointMissionDownloadEvent waypointMissionDownloadEvent) {
+                // Example of Download Listener
+                if (waypointMissionDownloadEvent.getProgress() != null
+                        && waypointMissionDownloadEvent.getProgress().isSummaryDownloaded
+                        && waypointMissionDownloadEvent.getProgress().downloadedWaypointIndex == 1) {
+//                    showToast("Download successful!");
+                }
+            }
+
+            @Override
+            public void onUploadUpdate(@NonNull WaypointMissionUploadEvent waypointMissionUploadEvent) {
+                // Example of Upload Listener
+                if (waypointMissionUploadEvent.getProgress() != null
+                        && waypointMissionUploadEvent.getProgress().isSummaryUploaded
+                        && waypointMissionUploadEvent.getProgress().uploadedWaypointIndex == 1) {
+//                    showToast("Upload successful!");
+                }
+            }
+
+            @Override
+            public void onExecutionUpdate(@NonNull WaypointMissionExecutionEvent waypointMissionExecutionEvent) {
+                // Example of Execution Listener
+                Log.d(TAG,
+                        (waypointMissionExecutionEvent.getPreviousState() == null
+                                ? ""
+                                : waypointMissionExecutionEvent.getPreviousState().getName())
+                                + ", "
+                                + waypointMissionExecutionEvent.getCurrentState().getName()
+                                + (waypointMissionExecutionEvent.getProgress() == null
+                                ? ""
+                                : waypointMissionExecutionEvent.getProgress().targetWaypointIndex));
+            }
+
+            @Override
+            public void onExecutionStart() {
+                showToast("Execution started!");
+                missioninfo.setText("开始执行航点飞行任务！\n" + "经度：" + waylng + " 纬度：" + waylat + " 高度：" + wayalt + " 速度：" + wayvel);
+                uavstate = UAVState.WAYEXEC;
+            }
+
+            @Override
+            public void onExecutionFinish(@Nullable DJIError djiError) {
+                showToast("Execution finished!");
+                missioninfo.setText("");
+                uavstate = UAVState.NONE;
+            }
+        };
+
+        if (waypointMissionOperator != null && waypointListener != null) {
+            // Example of adding listeners
+            waypointMissionOperator.addListener(waypointListener);
+        }
+    }
+
+    private void tearDownHotpointListener() {
+        if (hotpointMissionOperator != null && hotpointlistener != null) {
+            hotpointMissionOperator.removeListener(hotpointlistener);
+        }
+    }
+
+//    private Handler btstophandler = new Handler(){
+//        @Override
+//        public void handleMessage(Message msg){
+//            if (msg.what == 1){
+//                btstop.setVisibility(View.VISIBLE);
+//            }else if (msg.what == 0) {
+//                btstop.setVisibility(View.GONE);
+//            }
+//        }
+//    };
+
+    private void tearDownWaypointListener() {
+        if (waypointMissionOperator != null && waypointListener != null) {
+            // Example of removing listeners
+            waypointMissionOperator.removeListener(waypointListener);
+        }
+    }
+
+    enum UAVState {
+        NONE(0), WAYEXEC(1), HOTEXEC(2), ROTATEEXEC(3), AREXEC(4), WAYSAVE(5), HOTSAVE(6), ARSAVE(7);
+        private int statevalue;
+
+        UAVState(int v) {
+            this.statevalue = v;
+        }
+    }
+
+    private class ConnectRunnable implements Runnable {
+
+
+        @Override
+        public void run() {
+            try {
+                serverConnector.connect();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -609,360 +1961,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    protected void initPopupWindowConfirm(final int type) {
-        View v = getLayoutInflater().inflate(R.layout.pop_confirm, null, false);
-        popupWindowCon = new PopupWindow(v, 1000, 500, true);
-        popupWindowCon.setFocusable(true);
-
-        popupWindowCon.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
-        popupWindowCon.setBackgroundDrawable(new BitmapDrawable());
-
-        WindowManager.LayoutParams lp = getWindow().getAttributes();
-        lp.alpha = 0.5f;//设置阴影透明度
-        getWindow().setAttributes(lp);
-        popupWindowCon.setOnDismissListener(new PopupWindow.OnDismissListener() {
-
-            @Override
-            public void onDismiss() {
-                WindowManager.LayoutParams lp = getWindow().getAttributes();
-                lp.alpha = 1f;
-                getWindow().setAttributes(lp);
-            }
-        });
-
-        /* pop.xml视图里面的控件 */
-        Button btyes = (Button) v.findViewById(R.id.bt_yes);
-        Button btno = (Button) v.findViewById(R.id.bt_no);
-        TextView txtcontitle = (TextView) v.findViewById(R.id.txt_contitle);
-
-        if (type == 21 || type == 31 || type == 51) txtcontitle.setText("保存配置并等待编队命令");
-        else if (type == 1) {
-            txtcontitle.setText("中止执行任务");
-        }
-
-        //可视化
-        if (type == 31) {
-            addCircle(new Point(hotlng, hotlat), hotr);
-        }
-
-
-        btyes.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String str;
-                String res;
-
-                if (type == 1) {
-                    try {
-                        serverConnector.send("stop");
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        initPopupWindowResult("失败");
-                        popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-                    }
-                } else if (type / 10 == 2) {
-                    String choose = "";
-                    if (type == 21) choose = "all";
-                    else if (type == 22) choose = "alone";
-                    try {
-                        serverConnector.send("way," + choose + "," + teamnum + "," + waylng + "," + waylat + "," + wayalt + "," + wayvel);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        initPopupWindowResult("失败");
-                        popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-                    }
-                    popupWindowWay.dismiss();
-                } else if (type / 10 == 3) {
-                    popupWindowHot.dismiss();
-                    String choose = "";
-                    if (type == 31) choose = "all";
-                    else if (type == 32) choose = "alone";
-                    try {
-                        serverConnector.send("hot," + choose + "," + teamnum + "," + hotlng + "," + hotlat + "," + hotalt + "," + hotr + "," + hotw + "," + hotstart);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        initPopupWindowResult("失败");
-                        popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-                    }
-                } else if (type / 10 == 4) {
-                    popupWindowRotate.dismiss();
-                    str = "";
-                    if (type == 41) str += "east";
-                    else if (type == 42) str += "south";
-                    else if (type == 43) str += "west";
-                    else if (type == 44) str += "north";
-                    try {
-                        serverConnector.send("rotate," + str);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        initPopupWindowResult("失败");
-                        popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-                    }
-
-                } else if (type / 10 == 5) {
-                    String choose = "";
-                    if (type == 51) choose = "all";
-                    else if (type == 52) choose = "alone";
-                    try {
-                        serverConnector.send("ar," + choose + "," + teamnum + "," + autorotatew);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        initPopupWindowResult("失败");
-                        popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-                    }
-                    popupWindowAutorotate.dismiss();
-                }
-                popupWindowCon.dismiss();
-            }
-        });
-
-        btno.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                popupWindowCon.dismiss();
-            }
-        });
-    }
-
-
-    private void outputGPStoFile(String FileName) {
-        String ftime = "" + now.get(Calendar.YEAR) + '_' + now.get(Calendar.MONTH) + '_' + now.get(Calendar.DAY_OF_MONTH) + '-' + now.get(Calendar.HOUR_OF_DAY) + ':' + now.get(Calendar.MINUTE);
-
-        String state;
-        String path;
-        //获取内部存储根目录
-        File inpath = android.os.Environment.getDataDirectory();
-        //2 确认sdcard的存在
-        state = android.os.Environment.getExternalStorageState();
-        if(state.equals(android.os.Environment.MEDIA_MOUNTED)) {
-            //3 获取扩展存储设备的文件目录
-            path = android.os.Environment.getExternalStorageDirectory().getAbsolutePath();
-            String filefullname =  path+"/gpsdata_"+ftime+".txt";
-
-
-
-            try{
-                // FileWriter fileWriter = new FileWriter(path+"/gpsdata.txt",true);
-                FileWriter fileWriter = new FileWriter(filefullname,true);
-
-
-                BufferedWriter bw = new BufferedWriter(fileWriter);
-                // 输出坐标数量
-                bw.newLine();
-                bw.write("Time    Lng    Lat    Alt    Yaw    Pitch    Roll");
-                bw.newLine();
-                //遍历集合
-                int len = timelist.size();
-                for (int i=0; i<len; i++) {
-                    bw.write("" + timelist.get(i));
-                    bw.write("    ");
-                    bw.write("" + lnglist.get(i));
-                    bw.write("    ");
-                    bw.write("" + latlist.get(i));
-                    bw.write("    ");
-                    bw.write("" + altlist.get(i));
-                    bw.write("    ");
-                    bw.write("" + yawlist.get(i));
-                    bw.write("    ");
-                    bw.write("" + pitchlist.get(i));
-                    bw.write("    ");
-                    bw.write("" + rolllist.get(i));
-                    bw.newLine();
-                    bw.flush();
-                }
-                // //释放资源
-                bw.close();
-                fileWriter.close();
-            }catch (IOException e) {
-                e.printStackTrace();
-                Toast.makeText(this,"file is not exist",Toast.LENGTH_SHORT).show();
-            }
-        }
-        else ///没有sd卡 就用手机本身内存
-        {
-            //getFilesDir
-            File sdFie = android.os.Environment.getDataDirectory();
-            path = android.os.Environment.getDataDirectory().getAbsolutePath();//获取手机内存绝对路径
-
-            try{
-                FileWriter fileWriter = new FileWriter(path+"/gpsdata_"+ftime+".txt",true);
-                BufferedWriter bw = new BufferedWriter(fileWriter);
-                // 输出坐标数量
-                bw.write("" );
-                bw.newLine();
-                bw.write("Time    Lng    Lat    Alt    Yaw    Pitch    Roll");
-                bw.newLine();
-                //遍历集合
-                int len = timelist.size();
-                for (int i=0; i<len; i++) {
-                    bw.write("" + timelist.get(i));
-                    bw.write("    ");
-                    bw.write("" + lnglist.get(i));
-                    bw.write("    ");
-                    bw.write("" + latlist.get(i));
-                    bw.write("    ");
-                    bw.write("" + altlist.get(i));
-                    bw.write("    ");
-                    bw.write("" + yawlist.get(i));
-                    bw.write("    ");
-                    bw.write("" + pitchlist.get(i));
-                    bw.write("    ");
-                    bw.write("" + rolllist.get(i));
-                    bw.newLine();
-                    bw.flush();
-                }
-                // //释放资源
-                bw.close();
-                fileWriter.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-                Toast.makeText(this, "file is not exist", Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
-
-    protected void initPopupWindowResult(String str) {
-        View v = getLayoutInflater().inflate(R.layout.pop_result, null, false);
-        popupWindowResult = new PopupWindow(v, 600, 300, true);
-        popupWindowResult.setFocusable(true);
-
-        popupWindowResult.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
-        popupWindowResult.setBackgroundDrawable(new BitmapDrawable());
-
-        WindowManager.LayoutParams lp = getWindow().getAttributes();
-        lp.alpha = 0.5f;//设置阴影透明度
-        getWindow().setAttributes(lp);
-        popupWindowResult.setOnDismissListener(new PopupWindow.OnDismissListener() {
-
-            @Override
-            public void onDismiss() {
-                WindowManager.LayoutParams lp = getWindow().getAttributes();
-                lp.alpha = 1f;
-                getWindow().setAttributes(lp);
-            }
-        });
-
-        TextView sometext = (TextView) v.findViewById(R.id.sometext);
-        sometext.setText(str);
-
-    }
-
-    public void connectServer(String serverhost, int serverport) {
-        serverHandlerThread = new HandlerThread("MainActivity", android.os.Process.THREAD_PRIORITY_BACKGROUND);
-        serverHandlerThread.start();
-        serverHandler = new Handler(serverHandlerThread.getLooper());
-        serverConnector = new ClientConnector(serverhost, serverport);
-        serverConnector.setOnConnectLinstener(this);
-        serverHandler.post(new ConnectRunnable());
-    }
-
-    protected void initPopupWindowCserver() {
-        View v = getLayoutInflater().inflate(R.layout.pop_connectserver, null, false);
-        popupWindowCserver = new PopupWindow(v, 1000, 500, true);
-        popupWindowCserver.setFocusable(true);
-
-        popupWindowCserver.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
-        popupWindowCserver.setBackgroundDrawable(new BitmapDrawable());
-
-        WindowManager.LayoutParams lp = getWindow().getAttributes();
-        lp.alpha = 0.5f;//设置阴影透明度
-        getWindow().setAttributes(lp);
-        popupWindowCserver.setOnDismissListener(new PopupWindow.OnDismissListener() {
-
-            @Override
-            public void onDismiss() {
-                WindowManager.LayoutParams lp = getWindow().getAttributes();
-                lp.alpha = 1f;
-                getWindow().setAttributes(lp);
-            }
-        });
-
-        /* pop.xml视图里面的控件 */
-        Button btyes = (Button) v.findViewById(R.id.bt_yes);
-        Button btno = (Button) v.findViewById(R.id.bt_no);
-        final TextView txtaddr = (TextView) v.findViewById(R.id.etip);
-
-
-        btyes.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                popupWindowCserver.dismiss();
-                String addr = txtaddr.getText().toString();
-                if (addr.contains(":")) {
-                    try {
-                        serverhost = addr.split(":")[0];
-                        serverport = Integer.parseInt(addr.split(":")[1]);
-                        connectServer(serverhost, serverport);
-                        sleep(1000);
-                    } catch (Exception e) {
-                        initPopupWindowResult("连接失败");
-                        popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-                    }
-                } else {
-                    initPopupWindowResult("连接失败");
-                    popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-                }
-            }
-        });
-
-        btno.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                popupWindowCserver.dismiss();
-            }
-        });
-    }
-
-    protected void initPopupWindowJointeam() {
-        View v = getLayoutInflater().inflate(R.layout.pop_jointeam, null, false);
-        popupWindowJointeam = new PopupWindow(v, 1000, 500, true);
-        popupWindowJointeam.setFocusable(true);
-
-        popupWindowJointeam.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
-        popupWindowJointeam.setBackgroundDrawable(new BitmapDrawable());
-
-        WindowManager.LayoutParams lp = getWindow().getAttributes();
-        lp.alpha = 0.5f;//设置阴影透明度
-        getWindow().setAttributes(lp);
-        popupWindowJointeam.setOnDismissListener(new PopupWindow.OnDismissListener() {
-
-            @Override
-            public void onDismiss() {
-                WindowManager.LayoutParams lp = getWindow().getAttributes();
-                lp.alpha = 1f;
-                getWindow().setAttributes(lp);
-            }
-        });
-
-        /* pop.xml视图里面的控件 */
-        Button btyes = (Button) v.findViewById(R.id.bt_yes);
-        Button btno = (Button) v.findViewById(R.id.bt_no);
-        final TextView etnum = (TextView) v.findViewById(R.id.etnum);
-
-        btyes.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                popupWindowJointeam.dismiss();
-
-                try {
-                    serverConnector.send("jointeam," + etnum.getText().toString());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    initPopupWindowResult("加入编队失败");
-                    popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-                }
-
-            }
-        });
-
-        btno.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                popupWindowJointeam.dismiss();
-            }
-        });
-    }
-
     protected void initPopupWindowHistory() {
         /* TODO Auto-generated method stub */
 
@@ -1035,385 +2033,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
     }
 
-    protected void initPopupWindowTeam() {
-        /* TODO Auto-generated method stub */
-
-        /* 获取自定义布局文件pop.xml的视图 */
-        View popupWindow_view = getLayoutInflater().inflate(R.layout.pop_team, null,
-                false);
-        /* 创建PopupWindow实例,200,150分别是宽度和高度 */
-        popupWindowTeam = new PopupWindow(popupWindow_view, 600, 600, true);
-
-        popupWindowTeam.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
-        popupWindowTeam.setBackgroundDrawable(new BitmapDrawable());
-
-        WindowManager.LayoutParams lp = getWindow().getAttributes();
-        lp.alpha = 0.5f;//设置阴影透明度
-        getWindow().setAttributes(lp);
-        popupWindowTeam.setOnDismissListener(new PopupWindow.OnDismissListener() {
-
-            @Override
-            public void onDismiss() {
-                WindowManager.LayoutParams lp = getWindow().getAttributes();
-                lp.alpha = 1f;
-                getWindow().setAttributes(lp);
-            }
-        });
-
-        /* pop.xml视图里面的控件 */
-        Button btcteam = (Button) popupWindow_view.findViewById(R.id.create_team);
-        Button btjteam = (Button) popupWindow_view.findViewById(R.id.join_team);
-        Button btqteam = (Button) popupWindow_view.findViewById(R.id.quit_team);
-        TextView txtteamstate = (TextView) popupWindow_view.findViewById(R.id.team_state);
-
-        if (teamnum != 0) {
-            txtteamstate.setText("编队号：" + teamnum);
-            btcteam.setEnabled(false);
-            btjteam.setEnabled(false);
-        } else {
-            btqteam.setEnabled(false);
-        }
-
-        btcteam.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                try {
-                    serverConnector.send("createteam," + System.currentTimeMillis() % 1000);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                popupWindowTeam.dismiss();
-
-            }
-        });
-
-        btjteam.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                popupWindowTeam.dismiss();
-                initPopupWindowJointeam();
-                popupWindowJointeam.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-            }
-        });
-
-        btqteam.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                teamleader = 0;
-                teamnum = 0;
-                popupWindowTeam.dismiss();
-            }
-        });
-
-    }
-
-    protected void initPopupWindowWay() {
-        View popupWindow_view = getLayoutInflater().inflate(R.layout.pop_way, null,
-                false);
-        /* 创建PopupWindow实例,200,150分别是宽度和高度 */
-        popupWindowWay = new PopupWindow(popupWindow_view, 1000, 1200, true);
-
-        popupWindowWay.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
-        popupWindowWay.setBackgroundDrawable(new BitmapDrawable());
-
-        WindowManager.LayoutParams lp = getWindow().getAttributes();
-        lp.alpha = 0.5f;//设置阴影透明度
-        getWindow().setAttributes(lp);
-        popupWindowWay.setOnDismissListener(new PopupWindow.OnDismissListener() {
-
-            @Override
-            public void onDismiss() {
-                WindowManager.LayoutParams lp = getWindow().getAttributes();
-                lp.alpha = 1f;
-                getWindow().setAttributes(lp);
-            }
-        });
-
-        /* pop.xml视图里面的控件 */
-        Button bttwgo = (Button) popupWindow_view.findViewById(R.id.bt_twgo);
-        Button btwgo = (Button) popupWindow_view.findViewById(R.id.bt_wgo);
-        final EditText etlng = (EditText) popupWindow_view.findViewById(R.id.et_lng);
-        final EditText etlat = (EditText) popupWindow_view.findViewById(R.id.et_lat);
-        final EditText etalt = (EditText) popupWindow_view.findViewById(R.id.et_alt);
-        final EditText etvel = (EditText) popupWindow_view.findViewById(R.id.et_vel);
-
-
-        if (teamnum == 0) {
-            bttwgo.setEnabled(false);
-        } else {
-            if (teamleader == 0) {
-                bttwgo.setText("保存配置");
-            }
-        }
-
-        bttwgo.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                try {
-                    wayalt = Double.parseDouble(etalt.getText().toString());
-                    waylat = Double.parseDouble(etlat.getText().toString());
-                    waylng = Double.parseDouble(etlng.getText().toString());
-                    wayvel = Double.parseDouble(etvel.getText().toString());
-                } catch (Exception e) {
-                    initPopupWindowResult("参数不合法");
-                    popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-                }
-                initPopupWindowConfirm(21);
-                popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-
-            }
-        } );
-
-        btwgo.setOnClickListener( new View.OnClickListener()
-        {
-            @Override
-            public void onClick( View v ) {
-                try {
-                    wayalt = Double.parseDouble(etalt.getText().toString());
-                    waylat = Double.parseDouble(etlat.getText().toString());
-                    waylng = Double.parseDouble(etlng.getText().toString());
-                    wayvel = Double.parseDouble(etvel.getText().toString());
-                } catch (Exception e) {
-                    initPopupWindowResult("参数不合法");
-                    popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-                }
-                initPopupWindowConfirm(22);
-                popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-            }
-        } );
-
-    }
-
-    protected void initPopupWindowHot() {
-        View popupWindow_view = getLayoutInflater().inflate(R.layout.pop_hot, null,
-                false);
-        /* 创建PopupWindow实例,200,150分别是宽度和高度 */
-        popupWindowHot = new PopupWindow(popupWindow_view, 1000, 1400, true);
-
-        popupWindowHot.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
-        popupWindowHot.setBackgroundDrawable(new BitmapDrawable());
-
-        WindowManager.LayoutParams lp = getWindow().getAttributes();
-        lp.alpha = 0.5f;//设置阴影透明度
-        getWindow().setAttributes(lp);
-        popupWindowHot.setOnDismissListener(new PopupWindow.OnDismissListener() {
-
-            @Override
-            public void onDismiss() {
-                WindowManager.LayoutParams lp = getWindow().getAttributes();
-                lp.alpha = 1f;
-                getWindow().setAttributes(lp);
-            }
-        });
-
-        /* pop.xml视图里面的控件 */
-        Button btthgo = (Button) popupWindow_view.findViewById(R.id.bt_thgo);
-        Button bthgo = (Button) popupWindow_view.findViewById(R.id.bt_hgo);
-        final EditText etlng = (EditText) popupWindow_view.findViewById(R.id.et_lng);
-        final EditText etlat = (EditText) popupWindow_view.findViewById(R.id.et_lat);
-        final EditText etalt = (EditText) popupWindow_view.findViewById(R.id.et_alt);
-        final EditText etw = (EditText) popupWindow_view.findViewById(R.id.et_w);
-        final EditText etr = (EditText) popupWindow_view.findViewById(R.id.et_r);
-        final Spinner spstart = (Spinner) popupWindow_view.findViewById(R.id.sp_start);
-
-        if (teamnum == 0) {
-            btthgo.setEnabled(false);
-        } else {
-            if (teamleader == 0) {
-                btthgo.setText("保存配置");
-            }
-        }
-
-        btthgo.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                try {
-                    hotalt = Double.parseDouble(etalt.getText().toString());
-                    hotlat = Double.parseDouble(etlat.getText().toString());
-                    hotlng = Double.parseDouble(etlng.getText().toString());
-                    hotw = Double.parseDouble(etw.getText().toString());
-                    hotr = Double.parseDouble(etr.getText().toString());
-                    String tmp = spstart.getSelectedItem().toString();
-                    if (tmp.contains("东")) hotstart = "east";
-                    else if (tmp.contains("南")) hotstart = "south";
-                    else if (tmp.contains("西")) hotstart = "west";
-                    else if (tmp.contains("北")) hotstart = "north";
-                } catch (Exception e) {
-                    initPopupWindowResult("参数不合法");
-                    popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-                }
-
-                initPopupWindowConfirm(31);
-                popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-            }
-        });
-
-        bthgo.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                try {
-                    hotalt = Double.parseDouble(etalt.getText().toString());
-                    hotlat = Double.parseDouble(etlat.getText().toString());
-                    hotlng = Double.parseDouble(etlng.getText().toString());
-                    hotw = Double.parseDouble(etw.getText().toString());
-                    hotr = Double.parseDouble(etr.getText().toString());
-                    String tmp = spstart.getSelectedItem().toString();
-                    if (tmp.contains("东")) hotstart = "east";
-                    else if (tmp.contains("南")) hotstart = "south";
-                    else if (tmp.contains("西")) hotstart = "west";
-                    else if (tmp.contains("北")) hotstart = "north";
-                } catch (Exception e) {
-                    initPopupWindowResult("参数不合法");
-                    popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-                }
-
-                initPopupWindowConfirm(32);
-                popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-
-            }
-        });
-
-    }
-
-    protected void initPopupWindowRotate() {
-        /* TODO Auto-generated method stub */
-
-        /* 获取自定义布局文件pop.xml的视图 */
-        View popupWindow_view = getLayoutInflater().inflate(R.layout.pop_rotate, null,
-                false);
-        /* 创建PopupWindow实例,200,150分别是宽度和高度 */
-        popupWindowRotate = new PopupWindow(popupWindow_view, 500, 800, true);
-
-        popupWindowRotate.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
-        popupWindowRotate.setBackgroundDrawable(new BitmapDrawable());
-
-        WindowManager.LayoutParams lp = getWindow().getAttributes();
-        lp.alpha = 0.5f;//设置阴影透明度
-        getWindow().setAttributes(lp);
-        popupWindowRotate.setOnDismissListener(new PopupWindow.OnDismissListener() {
-
-            @Override
-            public void onDismiss() {
-                WindowManager.LayoutParams lp = getWindow().getAttributes();
-                lp.alpha = 1f;
-                getWindow().setAttributes(lp);
-            }
-        });
-
-        /* pop.xml视图里面的控件 */
-        Button bteast = (Button) popupWindow_view.findViewById(R.id.bt_east);
-        Button btwest = (Button) popupWindow_view.findViewById(R.id.bt_west);
-        Button btnorth = (Button) popupWindow_view.findViewById(R.id.bt_north);
-        Button btsouth = (Button) popupWindow_view.findViewById(R.id.bt_south);
-
-
-        bteast.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                initPopupWindowConfirm(41);
-                popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-            }
-        });
-
-        btwest.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                initPopupWindowConfirm(43);
-                popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-
-            }
-        });
-
-        btnorth.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                initPopupWindowConfirm(44);
-                popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-
-            }
-        });
-
-        btsouth.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                initPopupWindowConfirm(42);
-                popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-
-            }
-        });
-
-    }
-
-    protected void initPopupWindowAutorotate() {
-        /* TODO Auto-generated method stub */
-
-        /* 获取自定义布局文件pop.xml的视图 */
-        View popupWindow_view = getLayoutInflater().inflate(R.layout.pop_autorotate, null,
-                false);
-        /* 创建PopupWindow实例,200,150分别是宽度和高度 */
-        popupWindowAutorotate = new PopupWindow(popupWindow_view, 1000, 600, true);
-
-        popupWindowAutorotate.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
-        popupWindowAutorotate.setBackgroundDrawable(new BitmapDrawable());
-
-        WindowManager.LayoutParams lp = getWindow().getAttributes();
-        lp.alpha = 0.5f;//设置阴影透明度
-        getWindow().setAttributes(lp);
-        popupWindowAutorotate.setOnDismissListener(new PopupWindow.OnDismissListener() {
-
-            @Override
-            public void onDismiss() {
-                WindowManager.LayoutParams lp = getWindow().getAttributes();
-                lp.alpha = 1f;
-                getWindow().setAttributes(lp);
-            }
-        });
-
-        /* pop.xml视图里面的控件 */
-        Button bttargo = (Button) popupWindow_view.findViewById(R.id.bt_targo);
-        Button btargo = (Button) popupWindow_view.findViewById(R.id.bt_argo);
-        final EditText etw = (EditText) popupWindow_view.findViewById(R.id.et_w);
-
-        if (teamnum == 0) {
-            bttargo.setEnabled(false);
-        } else {
-            if (teamleader == 0) {
-                bttargo.setText("保存配置");
-            }
-        }
-
-        bttargo.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                try {
-                    autorotatew = Double.parseDouble(etw.getText().toString());
-                } catch (Exception e) {
-                    initPopupWindowResult("参数不合法");
-                    popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-                }
-                initPopupWindowConfirm(51);
-                popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-
-            }
-        });
-
-        btargo.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                try {
-                    autorotatew = Double.parseDouble(etw.getText().toString());
-                } catch (Exception e) {
-                    initPopupWindowResult("参数不合法");
-                    popupWindowResult.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-                }
-
-                initPopupWindowConfirm(52);
-                popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-            }
-        });
-
-    }
-
     class ChartTestThread extends Thread {
         MainActivity m;
 
@@ -1443,19 +2062,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-            }
-        }
-    }
-
-    private class ConnectRunnable implements Runnable {
-
-
-        @Override
-        public void run() {
-            try {
-                serverConnector.connect();
-            } catch (IOException e) {
-                e.printStackTrace();
             }
         }
     }
@@ -1548,7 +2154,5 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             return iconPoints.get(index).y;
         }
     }
-
-
 
 }
