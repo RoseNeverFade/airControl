@@ -35,6 +35,7 @@ public class Charts1Activity extends AppCompatActivity {
     private Button buttonPause;
     private Button buttonReplay;
     private DroneData droneData;
+    private double squareLen = 0;
 
     private TextView text_alt;
     private TextView text_time;
@@ -111,10 +112,10 @@ public class Charts1Activity extends AppCompatActivity {
 
         int upperBoundary = DroneData.calcMax(droneData.getGpsAlt()).intValue() + 1;
 
-        int yMax = DroneData.calcMax(droneData.getGpsLat()).intValue() + 1;
-        int yMin = DroneData.calcMin(droneData.getGpsLat()).intValue() - 1;
-        int xMax = DroneData.calcMax(droneData.getGpsLng()).intValue() + 1;
-        int xMin = DroneData.calcMin(droneData.getGpsLng()).intValue() - 1;
+        double yMax = DroneData.calcMax(droneData.getGpsLat()).doubleValue();
+        double yMin = DroneData.calcMin(droneData.getGpsLat()).doubleValue();
+        double xMax = DroneData.calcMax(droneData.getGpsLng()).doubleValue();
+        double xMin = DroneData.calcMin(droneData.getGpsLng()).doubleValue();
 
         //int lowerBoundary =DroneData.calcMin(droneData.getGpsAlt()).intValue()- 1;
 
@@ -136,7 +137,7 @@ public class Charts1Activity extends AppCompatActivity {
         //dynamicPlot.setRangeBoundaries(0, 20, BoundaryMode.FIXED);
 
 
-        double squareLen = Math.max(xMax - xMin, yMax - yMin);
+        squareLen = Math.max(xMax - xMin, yMax - yMin);
 //        scatterPlot.setDomainStepMode(StepMode.INCREMENT_BY_FIT);
 ////        scatterPlot.setDomainStepValue(40);//TODO:
 //        scatterPlot.setRangeStepMode(StepMode.INCREMENT_BY_FIT);
@@ -158,8 +159,8 @@ public class Charts1Activity extends AppCompatActivity {
         dynamicPlot.getGraph().getDomainGridLinePaint().setPathEffect(dashFx);
         dynamicPlot.getGraph().getRangeGridLinePaint().setPathEffect(dashFx);
 
-        scatterPlot.getGraph().getLineLabelStyle(XYGraphWidget.Edge.LEFT).setFormat(new DecimalFormat("0.0"));
-        scatterPlot.getGraph().getLineLabelStyle(XYGraphWidget.Edge.BOTTOM).setFormat(new DecimalFormat("0.0"));
+        scatterPlot.getGraph().getLineLabelStyle(XYGraphWidget.Edge.LEFT).setFormat(new DecimalFormat("##.####"));
+        scatterPlot.getGraph().getLineLabelStyle(XYGraphWidget.Edge.BOTTOM).setFormat(new DecimalFormat("###.####"));
     }
 
     private void dataInit() {
@@ -198,6 +199,7 @@ public class Charts1Activity extends AppCompatActivity {
         LineAndPointFormatter iconFormatter =
                 new LineAndPointFormatter(this, R.xml.point_formatter_2);
         iconFormatter.setLegendIconEnabled(false);
+        droneIcon.lineLength = squareLen * 0.05;
         scatterPlot.addSeries(droneIcon, iconFormatter);
 
         //===============Drone Icon Head================
