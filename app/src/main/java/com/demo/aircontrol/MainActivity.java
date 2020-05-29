@@ -526,7 +526,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void outputGPStoFile() {
         Calendar now = Calendar.getInstance();
 
-        String ftime = "" + now.get(Calendar.YEAR) + '_' + now.get(Calendar.MONTH) + '_' + now.get(Calendar.DAY_OF_MONTH) + '-' + now.get(Calendar.HOUR_OF_DAY) + ':' + now.get(Calendar.MINUTE);
+        String ftime = "" + now.get(Calendar.YEAR) + '_' + (now.get(Calendar.MONTH)+1) + '_' + now.get(Calendar.DAY_OF_MONTH) + '-' + now.get(Calendar.HOUR_OF_DAY) + ':' + now.get(Calendar.MINUTE);
 
         String state;
         String path;
@@ -1487,7 +1487,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     droneAttitudePitch = djiFlightControllerCurrentState.getAttitude().pitch;
                     droneAttitudeRoll = djiFlightControllerCurrentState.getAttitude().roll;
                     droneAttitudeYaw = djiFlightControllerCurrentState.getAttitude().yaw;
-                    droneTime = "" + now.get(Calendar.YEAR) + '_' + now.get(Calendar.MONTH) + '_' + now.get(Calendar.DAY_OF_MONTH) + '-' + now.get(Calendar.HOUR_OF_DAY) + ':' + now.get(Calendar.MINUTE) + ':' + now.get(Calendar.SECOND);
+                    droneTime = "" + now.get(Calendar.YEAR) + '_' + (now.get(Calendar.MONTH)+1) + '_' + now.get(Calendar.DAY_OF_MONTH) + '-' + now.get(Calendar.HOUR_OF_DAY) + ':' + now.get(Calendar.MINUTE) + ':' + now.get(Calendar.SECOND);
 
                     lnglist.add(String.valueOf(droneLocationLng));
                     latlist.add(String.valueOf(droneLocationLat));
