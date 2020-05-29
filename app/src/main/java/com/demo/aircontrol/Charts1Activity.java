@@ -147,6 +147,7 @@ public class Charts1Activity extends AppCompatActivity {
 //        scatterPlot.setDomainStepValue(5);
         scatterPlot.setDomainBoundaries(xMin, xMin + squareLen, BoundaryMode.FIXED);
         scatterPlot.setRangeBoundaries(yMin, yMin + squareLen, BoundaryMode.FIXED);
+        droneIcon.lineLength = squareLen * 0.05;
 //        scatterPlot.setDomainBoundaries(null, null, BoundaryMode.GROW);
 //        scatterPlot.setRangeBoundaries(null, null, BoundaryMode.GROW);
 
@@ -485,7 +486,7 @@ public class Charts1Activity extends AppCompatActivity {
         private ArrayList<Point> iconPoints;
         private String title;
         private Point pos;
-        private double lineLength = 5;
+        public double lineLength = 0.0001;
         private double yaw = 0;
 
         DroneIcon(MyXYDatasource datasource, int seriesIndex, String title) {
@@ -507,7 +508,7 @@ public class Charts1Activity extends AppCompatActivity {
         public void updateIcon() {
             iconPoints.clear();
 
-            this.yaw = droneData.getGpsYaw().get(data.counts - 1);
+            this.yaw = 90 - droneData.getGpsYaw().get(data.counts - 1);
             double radians = Math.toRadians(this.yaw);
             double sina = Math.sin(radians) * lineLength;
             double cosa = Math.cos(radians) * lineLength;

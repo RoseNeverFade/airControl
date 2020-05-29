@@ -159,6 +159,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private ModelSurfaceView gLView;
     private SimpleXYSeries circleSeries;
     private SimpleXYSeries axisSeries;
+    private double minX;
+    private double minY;
+    private double maxX;
+    private double maxY;
+    private double chartLen;
 
     private static final int FILE_SELECT_CODE = 0;
     private Button btnHistory; //Button ...
@@ -1784,12 +1789,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         //===============routePlot================
         //Scatter
+        minX = 1000;
+        minY = 1000;
+        maxX = 0;
+        maxY = 0;
+        chartLen = 0;
         routeScatters = new ScatterSeries(points, "Drone 1");
         LineAndPointFormatter scatterFormatter = new LineAndPointFormatter(this, R.xml.point_formatter);
         scatterFormatter.setLegendIconEnabled(false);
         routePlot.addSeries(routeScatters, scatterFormatter);
-        routePlot.setRangeBoundaries(-100, 100, BoundaryMode.GROW);
-        routePlot.setDomainBoundaries(-100, 100, BoundaryMode.GROW);
+        routePlot.setRangeBoundaries(-1, 1, BoundaryMode.FIXED);
+        routePlot.setDomainBoundaries(-1, 1, BoundaryMode.FIXED);
 
         //Drone Icon
         droneIcon = new DroneIcon("Drone 1");
@@ -1839,6 +1849,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      * @param yaw   偏航角
      */
     private void addChartPoint(Point point, double yaw, double height) {
+
+        minX = Math.min(point.x.doubleValue(), minX);
+        minY = Math.min(point.y.doubleValue(), minY);
+        maxX = Math.max(point.x.doubleValue(), maxX);
+        maxY = Math.max(point.y.doubleValue(), maxY);
+        chartLen = Math.max(maxX - minX, maxY - minY);
+        double iconLen = chartLen * 0.05;
+        droneIcon.lineLength = iconLen;
+        routePlot.setRangeBoundaries(minY - iconLen, minY + chartLen + iconLen, BoundaryMode.FIXED);
+        routePlot.setDomainBoundaries(minX - iconLen, minX + chartLen + iconLen, BoundaryMode.FIXED);
         points.add(point);
         droneIcon.updateIcon(point, yaw);
         routePlot.redraw();
@@ -2101,7 +2121,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         private ArrayList<Point> iconPoints;
         private String title;
         private Point pos;
-        private double lineLength = 5;
+        public double lineLength = 0.0001;
         private double yaw = 0;
 
         DroneIcon(String title) {
@@ -2118,7 +2138,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         public void updateIcon(Point point, double yaw) {
             iconPoints.clear();
 
-            this.yaw = yaw;
+            this.yaw = 90 - yaw;
             double radians = Math.toRadians(this.yaw);
             double sina = Math.sin(radians) * lineLength;
             double cosa = Math.cos(radians) * lineLength;
