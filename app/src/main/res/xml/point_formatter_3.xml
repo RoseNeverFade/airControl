@@ -2,5 +2,5 @@
 <config
         linePaint.color="#00000000"
         vertexPaint.color="#ff3333"
-        vertexPaint.strokeWidth="5dp"
+        vertexPaint.strokeWidth="8dp"
         fillPaint.color="#00000000"/>
