@@ -203,18 +203,11 @@
                         android:layout_height="50dp"
                         android:text="…"
                 />
-<<<<<<< HEAD
 
             </LinearLayout>
             <TextView
                     android:id="@+id/missioninfo"
                     android:layout_width="350dp"
-=======
-            </LinearLayout>
-            <TextView
-                    android:id="@+id/missininfo"
-                    android:layout_width="0dp"
->>>>>>> 6eb5ca76691b23de0d4898a11040448df8f74b64
                     android:layout_height="48dp"
                     android:text="未执行飞行任务"
                     android:textSize="12sp"
@@ -223,7 +216,6 @@
                     app:layout_constraintStart_toEndOf="@+id/button_list"
                     app:layout_constraintEnd_toEndOf="parent"
             />
-<<<<<<< HEAD
             <Button
                 android:id="@+id/btn_stop"
                 android:layout_width="50dp"
@@ -235,8 +227,6 @@
                 android:text="q"
                 tools:ignore="MissingConstraints"/>
 
-=======
->>>>>>> 6eb5ca76691b23de0d4898a11040448df8f74b64
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -322,19 +312,7 @@
             app:layout_constraintTop_toTopOf="parent"
             android:id="@+id/right_bar"
     >
-<<<<<<< HEAD
 
-=======
-        <Button
-                android:id="@+id/btn_stop"
-                android:layout_width="50dp"
-                android:layout_height="50dp"
-                android:onClick="onClick"
-                android:layout_alignParentRight="true"
-                android:layout_marginRight="70dp"
-                android:text="q"
-                android:visibility="gone" tools:ignore="MissingConstraints"/>
->>>>>>> 6eb5ca76691b23de0d4898a11040448df8f74b64
 
 
         <Button

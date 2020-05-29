@@ -46,10 +46,7 @@ import dji.sdk.mission.hotpoint.HotpointMissionOperatorListener;
 import dji.sdk.mission.waypoint.WaypointMissionOperator;
 import dji.sdk.mission.waypoint.WaypointMissionOperatorListener;
 import dji.sdk.products.Aircraft;
-<<<<<<< HEAD
 import dji.sdk.sdkmanager.DJISDKInitEvent;
-=======
->>>>>>> 6eb5ca76691b23de0d4898a11040448df8f74b64
 import dji.sdk.sdkmanager.DJISDKManager;
 import org.andresoviedo.util.android.ContentUtils;
 
@@ -199,12 +196,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
         setContentView(R.layout.activity_main);
 
-<<<<<<< HEAD
         //Initialize DJI SDK Manager
         mHandler = new Handler(Looper.getMainLooper());
 
-=======
->>>>>>> 6eb5ca76691b23de0d4898a11040448df8f74b64
         //3d model
         ConstraintLayout layout = findViewById(R.id.modelBlock);
         try {
@@ -290,11 +284,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
 //        new TimeThread().start(); //启动新的线程
 
-<<<<<<< HEAD
         missioninfo = (TextView) findViewById(R.id.missioninfo);
-=======
-        missioninfo = (TextView) findViewById(R.id.missininfo);
->>>>>>> 6eb5ca76691b23de0d4898a11040448df8f74b64
         btstop = (Button) findViewById(R.id.btn_stop);
 
         teamnum = 0;
@@ -820,7 +810,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (mFlightController != null && mFlightController.isVirtualStickControlModeAvailable()) {
 
 
-<<<<<<< HEAD
             new Thread(() -> {
                 missioninfo.setText("开始执行原地旋转任务!\n" + "旋转速度：" + autorotatew);
                 uavstate = UAVState.AREXEC;
@@ -851,44 +840,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //
 //
 //
-=======
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    missioninfo.setText("开始执行原地旋转任务!\n" + "旋转速度：" + autorotatew);
-                    uavstate = UAVState.AREXEC;
-                    showToast("Execution started!");
-
-                    while (true) {
-                        if (stopmission == 1) {
-                            stopmission = 0;
-                            missioninfo.setText("");
-                            uavstate = UAVState.NONE;
-                            showToast("Execution finished!");
-
-                            break;
-                        }
-                        try {
-                            sleep(100);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-//                                YawControlMode tmpyaw =  mFlightController.getYawControlMode();
-//                                System.out.println(tmpyaw);
-//
-                        mFlightController.sendVirtualStickFlightControlData(new FlightControlData((float) droneAttitudePitch, (float) droneAttitudeRoll, 5, (float) droneLocationAlt), new CommonCallbacks.CompletionCallback() {
-                            @Override
-                            public void onResult(DJIError djiError) {
-//                                        System.out.println("++++++++++++++++++++++++++++++++++++++++++++++++++++"+djiError.getDescription());
-                            }
-                        });
-//
-                    }
-//
-//
-//
-                }
->>>>>>> 6eb5ca76691b23de0d4898a11040448df8f74b64
             }).start();
 
 
@@ -1014,7 +965,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         if (mFlightController != null && mFlightController.isVirtualStickControlModeAvailable()) {
 
 
-<<<<<<< HEAD
                             new Thread(() -> {
                                 String dir[] = {"西", "北", "东", "南"};
                                 missioninfo.setText("开始执行无人机转向任务！\n机头转向：" + dir[type - 41]);
@@ -1051,44 +1001,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //
 //
 //
-=======
-                            new Thread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    String dir[] = {"西", "北", "东", "南"};
-                                    missioninfo.setText("开始执行无人机转向任务！\n机头转向：" + dir[type - 41]);
-                                    uavstate = UAVState.ROTATEEXEC;
-                                    showToast("Execution started!");
-
-                                    while (Math.abs(rotatedir - droneAttitudeYaw) > 0.1) {
-                                        if (stopmission == 1) {
-                                            break;
-                                        }
-                                        try {
-                                            sleep(100);
-                                        } catch (InterruptedException e) {
-                                            e.printStackTrace();
-                                        }
-//                                YawControlMode tmpyaw =  mFlightController.getYawControlMode();
-//                                System.out.println(tmpyaw);
-//
-                                        mFlightController.sendVirtualStickFlightControlData(new FlightControlData((float) droneAttitudePitch, (float) droneAttitudeRoll, rotatedir, (float) droneLocationAlt), new CommonCallbacks.CompletionCallback() {
-                                            @Override
-                                            public void onResult(DJIError djiError) {
-//                                                showResultToast(djiError);
-                                            }
-                                        });
-//
-                                    }
-                                    stopmission = 0;
-                                    missioninfo.setText("");
-                                    uavstate = UAVState.NONE;
-                                    showToast("Execution finished!");
-//
-//
-//
-                                }
->>>>>>> 6eb5ca76691b23de0d4898a11040448df8f74b64
                             }).start();
 
 
@@ -1557,30 +1469,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     droneAttitudeYaw = djiFlightControllerCurrentState.getAttitude().yaw;
                     droneTime = "" + now.get(Calendar.YEAR) + '_' + now.get(Calendar.MONTH) + '_' + now.get(Calendar.DAY_OF_MONTH) + '-' + now.get(Calendar.HOUR_OF_DAY) + ':' + now.get(Calendar.MINUTE) + ':' + now.get(Calendar.SECOND);
 
-<<<<<<< HEAD
                     lnglist.add(String.valueOf(droneLocationLng));
                     latlist.add(String.valueOf(droneLocationLat));
                     altlist.add(String.valueOf(droneLocationAlt));
                     yawlist.add(String.valueOf(droneAttitudeYaw));
                     pitchlist.add(String.valueOf(droneAttitudePitch));
-=======
-                    tLng.setText(String.valueOf(droneLocationLng));
-                    lnglist.add(String.valueOf(droneLocationLng));
-                    tLat.setText(String.valueOf(droneLocationLat));
-                    latlist.add(String.valueOf(droneLocationLat));
-                    tAlt.setText(String.valueOf(droneLocationAlt));
-                    altlist.add(String.valueOf(droneLocationAlt));
-                    tYaw.setText(String.valueOf(droneAttitudeYaw));
-                    yawlist.add(String.valueOf(droneAttitudeYaw));
-                    tPitch.setText(String.valueOf(droneAttitudePitch));
-                    pitchlist.add(String.valueOf(droneAttitudePitch));
-                    tRoll.setText(String.valueOf(droneAttitudeRoll));
->>>>>>> 6eb5ca76691b23de0d4898a11040448df8f74b64
                     rolllist.add(String.valueOf(droneAttitudeRoll));
                     SimpleDateFormat df = new SimpleDateFormat("yyyy/MM/dd-HH:mm:ss:SSS");//设置日期格式
                     timelist.add(df.format(new Date()));
 
-<<<<<<< HEAD
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
@@ -1594,8 +1491,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     });
 
 
-=======
->>>>>>> 6eb5ca76691b23de0d4898a11040448df8f74b64
                     //可视化
                     addChartPoint(new Point(droneLocationLng, droneLocationLat), droneAttitudeYaw, droneLocationAlt);
                     rotateModel(droneAttitudeYaw, droneAttitudePitch, droneAttitudeRoll);
@@ -1727,7 +1622,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                         }
 
-<<<<<<< HEAD
                         @Override
                         public void onInitProcess(DJISDKInitEvent djisdkInitEvent, int i) {
 
@@ -1738,8 +1632,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                         }
 
-=======
->>>>>>> 6eb5ca76691b23de0d4898a11040448df8f74b64
                     });
                 }
             });
