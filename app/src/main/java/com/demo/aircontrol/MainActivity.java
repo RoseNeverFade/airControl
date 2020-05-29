@@ -934,7 +934,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         }
                     } else if (type / 10 == 3) {
                         popupWindowHot.dismiss();
-                        addCircle(new Point(hotlng, hotlat), hotr);
+                        //TODO:bugfix
+                        double xr = hotr / 30.887479;
+                        addCircle(new Point(hotlng, hotlat), xr);
                         if (type == 32) {
                             exechotpointmission();
                         } else {
@@ -1822,9 +1824,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         routePlot.setDomainBoundaries(-1, 1, BoundaryMode.FIXED);
 
         routePlot.getGraph().getLineLabelStyle(
-                XYGraphWidget.Edge.LEFT).setFormat(new DecimalFormat("##.#####"));
+                XYGraphWidget.Edge.LEFT).setFormat(new DecimalFormat("##.####"));
         routePlot.getGraph().getLineLabelStyle(
-                XYGraphWidget.Edge.BOTTOM).setFormat(new DecimalFormat("###.#####"));
+                XYGraphWidget.Edge.BOTTOM).setFormat(new DecimalFormat("###.####"));
         //Drone Icon
         droneIcon = new DroneIcon("Drone 1");
         LineAndPointFormatter iconFormatter =
@@ -1927,8 +1929,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         axisSeries.addFirst(axis.x, axis.y);
 
         for (int i = 0; i < 128; i++) {
-            Number x = axis.x.doubleValue() + r * Math.cos(2 * Math.PI * i / pointNum) * xyScale;
-            Number y = axis.y.doubleValue() + r * Math.sin(2 * Math.PI * i / pointNum);
+            Number x = axis.x.doubleValue() + r * Math.cos(2 * Math.PI * i / pointNum);
+            Number y = axis.y.doubleValue() + r * Math.sin(2 * Math.PI * i / pointNum) * xyScale;
             circleSeries.addFirst(x, y);
         }
         circleSeries.addFirst(axis.x.doubleValue() + r, axis.y);
@@ -2181,14 +2183,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             double cosa = Math.cos(radians) * lineLength;
 
             pos = point;
-            Point head = new Point(pos.x.doubleValue() + cosa * xyScale, pos.y.doubleValue() + sina);
+            Point head = new Point(pos.x.doubleValue() + cosa, pos.y.doubleValue() + sina * xyScale);
             iconPoints.add(head);
             droneIconHead.clear();
             droneIconHead.addFirst(head.x, head.y);
-            iconPoints.add(new Point(pos.x.doubleValue() - cosa * xyScale, pos.y.doubleValue() - sina));
+            iconPoints.add(new Point(pos.x.doubleValue() - cosa, pos.y.doubleValue() - sina * xyScale));
             iconPoints.add(new Point(pos.x.doubleValue(), pos.y.doubleValue()));
-            iconPoints.add(new Point(pos.x.doubleValue() + sina * xyScale, pos.y.doubleValue() - cosa));
-            iconPoints.add(new Point(pos.x.doubleValue() - sina * xyScale, pos.y.doubleValue() + cosa));
+            iconPoints.add(new Point(pos.x.doubleValue() + sina, pos.y.doubleValue() - cosa * xyScale));
+            iconPoints.add(new Point(pos.x.doubleValue() - sina, pos.y.doubleValue() + cosa * xyScale));
         }
 
         @Override
