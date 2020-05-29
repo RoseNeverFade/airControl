@@ -54,6 +54,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -164,7 +165,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private double minY;
     private double maxX;
     private double maxY;
-    private double chartLen;
+    private static double xyScale = 0.762; //yRange:xRange
+    private double chartXRange;
+    private double chartYRange;
 
     private static final int FILE_SELECT_CODE = 0;
     private Button btnHistory; //Button ...
@@ -931,6 +934,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         }
                     } else if (type / 10 == 3) {
                         popupWindowHot.dismiss();
+                        addCircle(new Point(hotlng, hotlat), hotr);
                         if (type == 32) {
                             exechotpointmission();
                         } else {
@@ -1808,7 +1812,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         minY = 1000;
         maxX = 0;
         maxY = 0;
-        chartLen = 0;
+        chartXRange = 0;
+        chartYRange = 0;
         routeScatters = new ScatterSeries(points, "Drone 1");
         LineAndPointFormatter scatterFormatter = new LineAndPointFormatter(this, R.xml.point_formatter);
         scatterFormatter.setLegendIconEnabled(false);
@@ -1816,6 +1821,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         routePlot.setRangeBoundaries(-1, 1, BoundaryMode.FIXED);
         routePlot.setDomainBoundaries(-1, 1, BoundaryMode.FIXED);
 
+        routePlot.getGraph().getLineLabelStyle(
+                XYGraphWidget.Edge.LEFT).setFormat(new DecimalFormat("##.#####"));
+        routePlot.getGraph().getLineLabelStyle(
+                XYGraphWidget.Edge.BOTTOM).setFormat(new DecimalFormat("###.#####"));
         //Drone Icon
         droneIcon = new DroneIcon("Drone 1");
         LineAndPointFormatter iconFormatter =
@@ -1869,11 +1878,24 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         minY = Math.min(point.y.doubleValue(), minY);
         maxX = Math.max(point.x.doubleValue(), maxX);
         maxY = Math.max(point.y.doubleValue(), maxY);
-        chartLen = Math.max(maxX - minX, maxY - minY);
-        double iconLen = chartLen * 0.05;
+        double deltaX = maxX - minX;
+        double deltaY = maxY - minY;
+
+        if (deltaX * xyScale > deltaY) {
+            //domain = deltaX
+            chartXRange = deltaX;
+            chartYRange = chartXRange * xyScale;
+
+        } else {
+            //range = deltaY
+            chartYRange = deltaY;
+            chartXRange = chartYRange / xyScale;
+        }
+        double iconLen = chartYRange * 0.05;
         droneIcon.lineLength = iconLen;
-        routePlot.setRangeBoundaries(minY - iconLen, minY + chartLen + iconLen, BoundaryMode.FIXED);
-        routePlot.setDomainBoundaries(minX - iconLen, minX + chartLen + iconLen, BoundaryMode.FIXED);
+
+        routePlot.setRangeBoundaries(minY - iconLen, minY + chartYRange + iconLen, BoundaryMode.FIXED);
+        routePlot.setDomainBoundaries(minX - iconLen * xyScale, minX + chartXRange + iconLen * xyScale, BoundaryMode.FIXED);
         points.add(point);
         droneIcon.updateIcon(point, yaw);
         routePlot.redraw();
@@ -1905,7 +1927,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         axisSeries.addFirst(axis.x, axis.y);
 
         for (int i = 0; i < 128; i++) {
-            Number x = axis.x.doubleValue() + r * Math.cos(2 * Math.PI * i / pointNum);
+            Number x = axis.x.doubleValue() + r * Math.cos(2 * Math.PI * i / pointNum) * xyScale;
             Number y = axis.y.doubleValue() + r * Math.sin(2 * Math.PI * i / pointNum);
             circleSeries.addFirst(x, y);
         }
@@ -2159,14 +2181,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             double cosa = Math.cos(radians) * lineLength;
 
             pos = point;
-            Point head = new Point(pos.x.doubleValue() + cosa, pos.y.doubleValue() + sina);
+            Point head = new Point(pos.x.doubleValue() + cosa * xyScale, pos.y.doubleValue() + sina);
             iconPoints.add(head);
             droneIconHead.clear();
             droneIconHead.addFirst(head.x, head.y);
-            iconPoints.add(new Point(pos.x.doubleValue() - cosa, pos.y.doubleValue() - sina));
+            iconPoints.add(new Point(pos.x.doubleValue() - cosa * xyScale, pos.y.doubleValue() - sina));
             iconPoints.add(new Point(pos.x.doubleValue(), pos.y.doubleValue()));
-            iconPoints.add(new Point(pos.x.doubleValue() + sina, pos.y.doubleValue() - cosa));
-            iconPoints.add(new Point(pos.x.doubleValue() - sina, pos.y.doubleValue() + cosa));
+            iconPoints.add(new Point(pos.x.doubleValue() + sina * xyScale, pos.y.doubleValue() - cosa));
+            iconPoints.add(new Point(pos.x.doubleValue() - sina * xyScale, pos.y.doubleValue() + cosa));
         }
 
         @Override
