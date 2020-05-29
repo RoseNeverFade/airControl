@@ -168,6 +168,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private static double xyScale = 0.762; //yRange:xRange
     private double chartXRange;
     private double chartYRange;
+    private double EPS = 1E-8;
 
     private static final int FILE_SELECT_CODE = 0;
     private Button btnHistory; //Button ...
@@ -943,7 +944,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     } else if (type / 10 == 3) {
                         popupWindowHot.dismiss();
                         //TODO:bugfix
-                        double xr = hotr / 111194.927;
+                        double xr = hotr / 85360.64873;
                         addCircle(new Point(hotlng, hotlat), xr);
                         if (type == 32) {
                             exechotpointmission();
@@ -1890,16 +1891,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         maxY = Math.max(point.y.doubleValue(), maxY);
         double deltaX = maxX - minX;
         double deltaY = maxY - minY;
-
-        if (deltaX * xyScale > deltaY) {
-            //domain = deltaX
-            chartXRange = deltaX;
-            chartYRange = chartXRange * xyScale;
-
+        if (deltaX < EPS && deltaY < EPS) {
+            chartXRange = EPS;
+            chartYRange = EPS * xyScale;
         } else {
-            //range = deltaY
-            chartYRange = deltaY;
-            chartXRange = chartYRange / xyScale;
+            if (deltaX * xyScale > deltaY) {
+                //domain = deltaX
+                chartXRange = deltaX;
+                chartYRange = chartXRange * xyScale;
+
+            } else {
+                //range = deltaY
+                chartYRange = deltaY;
+                chartXRange = chartYRange / xyScale;
+            }
         }
         double iconLen = chartYRange * 0.05;
         droneIcon.lineLength = iconLen;
