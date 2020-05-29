@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:background="@android:color/darker_gray">
+
+    <TextView
+        android:layout_width="100dp"
+        android:layout_height="50dp"
+        android:text="经度"
+        android:layout_marginLeft="20dp"
+        android:layout_marginTop="20dp"
+        />
+
+
+    <TextView
+        android:layout_width="100dp"
+        android:layout_height="50dp"
+        android:text="纬度"
+        android:layout_marginLeft="20dp"
+        android:layout_marginTop="80dp"
+        />
+
+
+    <TextView
+        android:layout_width="100dp"
+        android:layout_height="50dp"
+        android:text="高度"
+        android:layout_marginLeft="20dp"
+        android:layout_marginTop="140dp"
+        />
+
+
+    <TextView
+        android:layout_width="100dp"
+        android:layout_height="50dp"
+        android:text="速度"
+        android:layout_marginLeft="20dp"
+        android:layout_marginTop="200dp"
+        />
+
+
+
+    <Button android:id="@+id/bt_twgo"
+        android:layout_width="100dp"
+        android:layout_height="50dp"
+        android:layout_marginTop="260dp"
+        android:layout_marginLeft="20dp"
+        android:text="编队执行"/>
+
+    <Button android:id="@+id/bt_wgo"
+        android:layout_width="100dp"
+        android:layout_height="50dp"
+        android:layout_marginTop="260dp"
+        android:layout_marginLeft="140dp"
+        android:text="执行任务"/>
+
+    <EditText
+        android:id="@+id/et_lng"
+        android:layout_width="100dp"
+        android:layout_height="50dp"
+        android:ems="10"
+        android:layout_marginTop="20dp"
+        android:layout_marginLeft="140dp"
+        android:inputType="text"
+        android:text="" />
+
+    <EditText
+        android:id="@+id/et_lat"
+        android:layout_width="100dp"
+        android:layout_height="50dp"
+        android:ems="10"
+        android:layout_marginTop="80dp"
+        android:layout_marginLeft="140dp"
+        android:inputType="text"
+        android:text="" />
+
+    <EditText
+        android:id="@+id/et_alt"
+        android:layout_width="100dp"
+        android:layout_height="50dp"
+        android:ems="10"
+        android:layout_marginTop="140dp"
+        android:layout_marginLeft="140dp"
+        android:inputType="text"
+        android:text="" />
+
+    <EditText
+        android:id="@+id/et_vel"
+        android:layout_width="100dp"
+        android:layout_height="50dp"
+        android:ems="10"
+        android:layout_marginTop="200dp"
+        android:layout_marginLeft="140dp"
+        android:inputType="text"
+        android:text="" />
+
+
+</RelativeLayout>

@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<androidx.constraintlayout.widget.ConstraintLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:context=".Charts2Activity">
+
+    <com.google.android.material.appbar.AppBarLayout
+            android:id="@+id/appbar"
+            android:layout_height="wrap_content"
+            android:layout_width="match_parent"
+            android:theme="@style/AppTheme.AppBarOverlay" app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent"
+    >
+        <TextView
+                android:id="@+id/title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:minHeight="?actionBarSize"
+                android:padding="@dimen/appbar_padding"
+                android:text="无人机姿态"
+                android:textColor="#FFFFFF"
+                android:textAppearance="@style/TextAppearance.Widget.AppCompat.Toolbar.Title"/>
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/constraintLayout1"
+            android:layout_height="0dp"
+            android:layout_width="match_parent"
+            app:layout_constraintTop_toBottomOf="@id/appbar"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toTopOf="@+id/constraintLayout2"
+    >
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/constraintLayout2"
+            android:layout_height="wrap_content"
+            android:layout_width="match_parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintHorizontal_bias="0.0"
+            android:minHeight="40dp"
+            android:paddingTop="8dp"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingBottom="8dp"
+            android:background="@color/colorPrimary"
+    >
+        <TextView android:layout_width="wrap_content"
+                  android:layout_height="match_parent"
+                  android:id="@+id/text1"
+                  android:textColor="#FFFFFF"
+                  android:paddingStart="0dp"
+                  android:paddingEnd="0dp"
+                  app:layout_constraintHorizontal_chainStyle="packed"
+                  android:text="俯仰角：" app:layout_constraintStart_toStartOf="parent"
+                  app:layout_constraintHorizontal_bias="0.5" app:layout_constraintEnd_toStartOf="@+id/text2"
+                  tools:layout_editor_absoluteY="16dp"/>
+        <TextView android:layout_width="wrap_content"
+                  android:layout_height="match_parent"
+                  android:id="@+id/text2"
+                  android:textColor="#FFFFFF"
+                  android:paddingStart="0dp"
+                  android:paddingEnd="8dp"
+                  android:text="0"
+                  app:layout_constraintStart_toEndOf="@+id/text1" app:layout_constraintHorizontal_bias="0.5"
+                  app:layout_constraintEnd_toStartOf="@+id/text3"
+                  app:layout_constraintTop_toTopOf="@+id/text1"/>
+        <TextView android:layout_width="wrap_content"
+                  android:layout_height="match_parent"
+                  android:id="@+id/text3"
+                  android:textColor="#FFFFFF"
+                  android:paddingStart="0dp"
+                  android:paddingEnd="0dp"
+                  android:text="横滚角："
+                  app:layout_constraintStart_toEndOf="@+id/text2" app:layout_constraintHorizontal_bias="0.5"
+                  app:layout_constraintEnd_toStartOf="@+id/text4"
+                  app:layout_constraintTop_toTopOf="@+id/text2"/>
+        <TextView android:layout_width="wrap_content"
+                  android:layout_height="match_parent"
+                  android:id="@+id/text4"
+                  android:textColor="#FFFFFF"
+                  android:paddingStart="0dp"
+                  android:paddingEnd="8dp"
+                  android:text="0"
+                  app:layout_constraintStart_toEndOf="@+id/text3" app:layout_constraintHorizontal_bias="0.5"
+                  app:layout_constraintEnd_toStartOf="@+id/text5"
+                  app:layout_constraintTop_toTopOf="@+id/text3"/>
+        <TextView android:layout_width="wrap_content"
+                  android:layout_height="match_parent"
+                  android:id="@+id/text5"
+                  android:textColor="#FFFFFF"
+                  android:paddingStart="0dp"
+                  android:paddingEnd="0dp"
+                  android:text="偏航角："
+                  app:layout_constraintStart_toEndOf="@+id/text4" app:layout_constraintHorizontal_bias="0.5"
+                  app:layout_constraintEnd_toStartOf="@+id/text6"
+                  app:layout_constraintTop_toTopOf="@+id/text4"/>
+        <TextView android:layout_width="wrap_content"
+                  android:layout_height="match_parent"
+                  android:id="@+id/text6"
+                  android:textColor="#FFFFFF"
+                  android:paddingStart="0dp"
+                  android:paddingEnd="8dp"
+                  android:text="0"
+                  app:layout_constraintStart_toEndOf="@+id/text5" app:layout_constraintHorizontal_bias="0.5"
+                  app:layout_constraintEnd_toEndOf="parent"
+                  app:layout_constraintTop_toTopOf="@+id/text5"/>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>
+
