@@ -199,14 +199,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         // When the compile and target version is higher than 22, please request the following permission at runtime to ensure the SDK works well.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            checkAndRequestPermissions();
+        if (!MyBuildConfig.isDebug) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                checkAndRequestPermissions();
+            }
         }
         setContentView(R.layout.activity_main);
-
-        //Initialize DJI SDK Manager
-        mHandler = new Handler(Looper.getMainLooper());
-
+        if (!MyBuildConfig.isDebug) {
+            //Initialize DJI SDK Manager
+            mHandler = new Handler(Looper.getMainLooper());
+        }
         //3d model
         ConstraintLayout layout = findViewById(R.id.modelBlock);
         try {
@@ -321,6 +323,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         scene.init();
         if (MyBuildConfig.isDebug) {
             droneData.loadFakeGPSData();
+            tRoll.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    testChart();
+                }
+            });
         }
 
     }
@@ -841,7 +849,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //                                System.out.println(tmpyaw);
 //
                     mFlightController.sendVirtualStickFlightControlData(new FlightControlData((float) droneAttitudePitch, (float) droneAttitudeRoll, autorotatew, (float) droneLocationAlt), djiError -> {
-                                    showResultToast(djiError);
+                        showResultToast(djiError);
                     });
 //
                 }
@@ -935,7 +943,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     } else if (type / 10 == 3) {
                         popupWindowHot.dismiss();
                         //TODO:bugfix
-                        double xr = hotr / 30.887479;
+                        double xr = hotr / 111194.927;
                         addCircle(new Point(hotlng, hotlat), xr);
                         if (type == 32) {
                             exechotpointmission();
@@ -2101,16 +2109,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         @Override
         public void run() {
-            double r = 60d;
+            double r = 0.001d;
             int num = 720;
             double h = 30d;
-            m.addCircle(new Point(0, 0), r);
+            m.addCircle(new Point(0, 0), r * 111194.926);
             double theta = 2 * Math.PI / 360;
             for (int i = 0; i < 720; i++) {
                 double t = theta * i;
                 Number x = r * Math.cos(t);
                 Number y = r * Math.sin(t);
-                double yaw = Math.toDegrees(t) + 90;
+                double yaw = -Math.toDegrees(t);
 
                 m.addChartPoint(new Point(x.doubleValue() + Math.random() * 0.1, y.doubleValue() + Math.random() * 0.1), yaw + Math.random(), h + Math.random() * 0.5);
                 double pitch = -10;
