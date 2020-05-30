@@ -459,7 +459,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
 
             case R.id.btn_stop:
-                if (!missioninfo.getText().equals("")) {
+                if (!missioninfo.getText().toString().contains("未执行飞行任务")) {
                     initPopupWindowConfirm(1);
                     popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
                 }
@@ -507,9 +507,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 } else if (data.contains("teamnotfound")) {
                     showToast("加入编队失败");
                 } else if (data.contains("stopsuccess")) {
-                    missioninfo.setText("");
+                    missioninfo.setText("未执行飞行任务");
                 } else if (data.contains("finish")) {
-                    missioninfo.setText("");
+                    missioninfo.setText("未执行飞行任务");
                     showToast("执行完毕");
                 } else if (data.contains("wayexec")) {
                     execwaypointmission();
@@ -741,9 +741,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         WaypointMission waypointMission = null;
         WaypointMission.Builder builder = new WaypointMission.Builder();
-        builder.autoFlightSpeed(4);
+//        builder.autoFlightSpeed(4);
         builder.autoFlightSpeed(wayvel);
-//        builder.maxFlightSpeed(10f);
+        builder.maxFlightSpeed(10f);
         builder.setExitMissionOnRCSignalLostEnabled(false);
         builder.finishedAction(WaypointMissionFinishedAction.NO_ACTION);
         builder.flightPathMode(WaypointMissionFlightPathMode.NORMAL);
@@ -753,6 +753,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         List<Waypoint> waypointList = new ArrayList<>();
 //        waypointList.add(new Waypoint((double) latitudeValue, (double) longitudeValue, 25));
 //        waypointList.add(new Waypoint(40.4903, 111.3899, 25));
+        showToast(droneLocationLat+","+droneLocationLng);
         waypointList.add(new Waypoint(droneLocationLat, droneLocationLng, wayalt));
         waypointList.add(new Waypoint(waylat, waylng, wayalt));
         builder.waypointList(waypointList).waypointCount(waypointList.size());
@@ -833,7 +834,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 while (true) {
                     if (stopmission == 1) {
                         stopmission = 0;
-                        missioninfo.setText("");
+                        missioninfo.setText("未执行飞行任务");
                         uavstate = UAVState.NONE;
                         showToast("Execution finished!");
 
@@ -923,7 +924,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         } else if (uavstate == UAVState.ROTATEEXEC || uavstate == UAVState.AREXEC) {
                             stopmission = 1;
                         } else {
-                            missioninfo.setText("");
+                            missioninfo.setText("未执行飞行任务");
                         }
                     } else if (type / 10 == 2) {
                         popupWindowWay.dismiss();
@@ -1013,7 +1014,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //
                                 }
                                 stopmission = 0;
-                                missioninfo.setText("");
+                                missioninfo.setText("未执行飞行任务");
                                 uavstate = UAVState.NONE;
                                 showToast("Execution finished!");
 //
@@ -1695,7 +1696,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             @Override
             public void onExecutionFinish(@Nullable DJIError djiError) {
                 showToast("Execution finished!");
-                missioninfo.setText("");
+                missioninfo.setText("未执行飞行任务");
                 uavstate = UAVState.NONE;
             }
         };
@@ -1752,7 +1753,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             @Override
             public void onExecutionFinish(@Nullable DJIError djiError) {
                 showToast("Execution finished!");
-                missioninfo.setText("");
+                missioninfo.setText("未执行飞行任务");
                 uavstate = UAVState.NONE;
             }
         };
