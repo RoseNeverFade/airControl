@@ -1833,9 +1833,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         routePlot.setDomainBoundaries(-1, 1, BoundaryMode.FIXED);
 
         routePlot.getGraph().getLineLabelStyle(
-                XYGraphWidget.Edge.LEFT).setFormat(new DecimalFormat("##.####"));
+                XYGraphWidget.Edge.LEFT).setFormat(new DecimalFormat("##.#####"));
         routePlot.getGraph().getLineLabelStyle(
-                XYGraphWidget.Edge.BOTTOM).setFormat(new DecimalFormat("###.####"));
+                XYGraphWidget.Edge.BOTTOM).setFormat(new DecimalFormat("###.#####"));
         //Drone Icon
         droneIcon = new DroneIcon("Drone 1");
         LineAndPointFormatter iconFormatter =
@@ -1965,7 +1965,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      * 旋转无人机模型
      */
     private void rotateModel(double yaw, double pitch, double roll) {
-        gLView.rotateModel(yaw, pitch, roll);
+        gLView.rotateModel(180 - yaw, pitch, roll);
     }
 
     /**
@@ -2125,10 +2125,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 Number y = r * Math.sin(t);
                 double yaw = -Math.toDegrees(t);
 
-                m.addChartPoint(new Point(x.doubleValue() + Math.random() * 0.1, y.doubleValue() + Math.random() * 0.1), yaw + Math.random(), h + Math.random() * 0.5);
+                m.addChartPoint(new Point(x.doubleValue(), y.doubleValue()), yaw + Math.random(), h);
                 double pitch = -10;
                 double roll = 0;
-                m.rotateModel(yaw, pitch, roll);
+                m.rotateModel(-yaw, pitch, roll);
                 try {
                     Thread.sleep(100);
                 } catch (InterruptedException e) {

@@ -45,6 +45,9 @@ public class Charts1Activity extends AppCompatActivity {
     private TextView text_x;
     private TextView text_y;
 
+    private static double xyScale = 0.762; //yRange:xRange
+    private double chartXRange;
+    private double chartYRange;
     private Handler textUpdateHandler = new Handler(new Handler.Callback() {
         @Override
         public boolean handleMessage(Message msg) {
@@ -137,7 +140,6 @@ public class Charts1Activity extends AppCompatActivity {
         //dynamicPlot.setRangeBoundaries(0, 20, BoundaryMode.FIXED);
 
 
-        squareLen = Math.max(xMax - xMin, yMax - yMin);
 //        scatterPlot.setDomainStepMode(StepMode.INCREMENT_BY_FIT);
 ////        scatterPlot.setDomainStepValue(40);//TODO:
 //        scatterPlot.setRangeStepMode(StepMode.INCREMENT_BY_FIT);
@@ -146,8 +148,21 @@ public class Charts1Activity extends AppCompatActivity {
 //
 //        scatterPlot.setRangeStepMode(StepMode.INCREMENT_BY_VAL);
 //        scatterPlot.setDomainStepValue(5);
-        scatterPlot.setDomainBoundaries(xMin, xMin + squareLen, BoundaryMode.FIXED);
-        scatterPlot.setRangeBoundaries(yMin, yMin + squareLen, BoundaryMode.FIXED);
+        double deltaX = xMax - xMin;
+        double deltaY = yMax - yMin;
+        squareLen = Math.max(xMax - xMin, yMax - yMin);
+        if (deltaX * xyScale > deltaY) {
+            //domain = deltaX
+            chartXRange = deltaX;
+            chartYRange = chartXRange * xyScale;
+
+        } else {
+            //range = deltaY
+            chartYRange = deltaY;
+            chartXRange = chartYRange / xyScale;
+        }
+        scatterPlot.setDomainBoundaries(xMin, xMin + chartXRange, BoundaryMode.FIXED);
+        scatterPlot.setRangeBoundaries(yMin, yMin + chartYRange, BoundaryMode.FIXED);
         droneIcon.lineLength = squareLen * 0.05;
 //        scatterPlot.setDomainBoundaries(null, null, BoundaryMode.GROW);
 //        scatterPlot.setRangeBoundaries(null, null, BoundaryMode.GROW);
@@ -159,8 +174,8 @@ public class Charts1Activity extends AppCompatActivity {
         dynamicPlot.getGraph().getDomainGridLinePaint().setPathEffect(dashFx);
         dynamicPlot.getGraph().getRangeGridLinePaint().setPathEffect(dashFx);
 
-        scatterPlot.getGraph().getLineLabelStyle(XYGraphWidget.Edge.LEFT).setFormat(new DecimalFormat("##.####"));
-        scatterPlot.getGraph().getLineLabelStyle(XYGraphWidget.Edge.BOTTOM).setFormat(new DecimalFormat("###.####"));
+        scatterPlot.getGraph().getLineLabelStyle(XYGraphWidget.Edge.LEFT).setFormat(new DecimalFormat("##.#####"));
+        scatterPlot.getGraph().getLineLabelStyle(XYGraphWidget.Edge.BOTTOM).setFormat(new DecimalFormat("###.#####"));
     }
 
     private void dataInit() {
