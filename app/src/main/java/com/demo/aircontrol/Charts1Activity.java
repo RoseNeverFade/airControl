@@ -531,13 +531,13 @@ public class Charts1Activity extends AppCompatActivity {
             double cosa = Math.cos(radians) * lineLength;
 
             pos = new Point(datasource.getTopX(seriesIndex), datasource.getTopY(seriesIndex));
-            Point head = new Point(pos.x.doubleValue() + cosa, pos.y.doubleValue() + sina);
+            Point head = new Point(pos.x.doubleValue() + cosa, pos.y.doubleValue() + sina * xyScale);
             iconPoints.add(head);
             droneIconHead.updatePos(head);
-            iconPoints.add(new Point(pos.x.doubleValue() - cosa, pos.y.doubleValue() - sina));
+            iconPoints.add(new Point(pos.x.doubleValue() - cosa, pos.y.doubleValue() - sina * xyScale));
             iconPoints.add(new Point(pos.x.doubleValue(), pos.y.doubleValue()));
-            iconPoints.add(new Point(pos.x.doubleValue() + sina, pos.y.doubleValue() - cosa));
-            iconPoints.add(new Point(pos.x.doubleValue() - sina, pos.y.doubleValue() + cosa));
+            iconPoints.add(new Point(pos.x.doubleValue() + sina, pos.y.doubleValue() - cosa * xyScale));
+            iconPoints.add(new Point(pos.x.doubleValue() - sina, pos.y.doubleValue() + cosa * xyScale));
         }
 
         @Override
