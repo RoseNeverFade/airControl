@@ -54,6 +54,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.URI;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -63,7 +64,7 @@ import static dji.keysdk.FlightControllerKey.HOME_LOCATION_LATITUDE;
 import static dji.keysdk.FlightControllerKey.HOME_LOCATION_LONGITUDE;
 import static java.lang.Thread.sleep;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener, ClientConnector.ConnectLinstener {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener{
 
     public static final String FLAG_CONNECTION_CHANGE = "dji_sdk_connection_change";
     private static final String TAG = MainActivity.class.getName();
@@ -113,10 +114,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private PopupWindow popupWindowJointeam;
     private PopupWindow popupWindowRotate;
     private PopupWindow popupWindowAutorotate;
-    private ClientConnector serverConnector;
     private String clientid;
     private HandlerThread serverHandlerThread;
     private Handler serverHandler;
+    private SocketClient client;
     private int teamnum;
     private int teamleader;
     private int stopmission;
@@ -443,6 +444,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
 
             case R.id.btn_cserver:
+
+
+
                 initPopupWindowCserver();
                 popupWindowCserver.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
                 break;
@@ -472,7 +476,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    @Override
     public void onReceiveData(final String data) {
         runOnUiThread(new Runnable() {
             @Override
@@ -486,10 +489,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             while (true) {
                                 try {
                                     sleep(500);
-                                    serverConnector.send(clientid + ",updatedate," + uavstate.statevalue + String.format(",%.4f,%.4f,%.4f,%.4f,%.4f,%.4f", droneLocationLng, droneLocationLat, droneLocationAlt, droneAttitudePitch, droneAttitudeRoll, droneAttitudeYaw));
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                } catch (InterruptedException e) {
+                                    client.send(clientid + ",updatedate," + uavstate.statevalue + String.format(",%.4f,%.4f,%.4f,%.4f,%.4f,%.4f", droneLocationLng, droneLocationLat, droneLocationAlt, droneAttitudePitch, droneAttitudeRoll, droneAttitudeYaw));
+                                } catch (Exception e) {
                                     e.printStackTrace();
                                 }
                             }
@@ -621,12 +622,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    public void connectServer(String serverhost, int serverport) throws IOException {
+    public void connectServer(String struri) {
         serverHandlerThread = new HandlerThread("MainActivity", android.os.Process.THREAD_PRIORITY_BACKGROUND);
         serverHandlerThread.start();
         serverHandler = new Handler(serverHandlerThread.getLooper());
-        serverConnector = new ClientConnector(serverhost, serverport);
-        serverConnector.setOnConnectLinstener(this);
+        URI uri = URI.create(struri);
+
+        client = new SocketClient(uri) {
+            @Override
+            public void onMessage(String message) {
+                //message就是接收到的消息
+                showToast("JWebSClientService"+  message);
+            }
+        };
         serverHandler.post(new ConnectRunnable());
     }
 
@@ -662,18 +670,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             public void onClick(View v) {
                 popupWindowCserver.dismiss();
                 String addr = txtaddr.getText().toString();
-                if (addr.contains(":")) {
-                    try {
-                        serverhost = addr.split(":")[0];
-                        serverport = Integer.parseInt(addr.split(":")[1]);
-                        connectServer(serverhost, serverport);
-                        sleep(3000);
-                        serverConnector.send("#" + clientid);
+                try {
+//                        connectServer(addr);
+                    connectServer("ws://192.168.0.107:8000/link/");
+                    sleep(3000);
+                    client.send("#" + clientid);
 
-                    } catch (Exception e) {
-                        showToast("连接失败");
-                    }
-                } else {
+                } catch (Exception e) {
                     showToast("连接失败");
                 }
             }
@@ -719,8 +722,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 popupWindowJointeam.dismiss();
 
                 try {
-                    serverConnector.send(clientid + ",jointeam," + etnum.getText().toString());
-                } catch (IOException e) {
+                    client.send(clientid + ",jointeam," + etnum.getText().toString());
+                } catch (Exception e) {
                     e.printStackTrace();
                     showToast("加入编队失败");
                 }
@@ -737,11 +740,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     protected void execwaypointmission() {
-        // 航点飞行任务
-
         WaypointMission waypointMission = null;
         WaypointMission.Builder builder = new WaypointMission.Builder();
-//        builder.autoFlightSpeed(4);
         builder.autoFlightSpeed(wayvel);
         builder.maxFlightSpeed(10f);
         builder.setExitMissionOnRCSignalLostEnabled(false);
@@ -751,8 +751,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         builder.headingMode(WaypointMissionHeadingMode.AUTO);
         builder.repeatTimes(1);
         List<Waypoint> waypointList = new ArrayList<>();
-//        waypointList.add(new Waypoint((double) latitudeValue, (double) longitudeValue, 25));
-//        waypointList.add(new Waypoint(40.4903, 111.3899, 25));
         showToast(droneLocationLat+","+droneLocationLng);
         waypointList.add(new Waypoint(droneLocationLat, droneLocationLng, wayalt));
         waypointList.add(new Waypoint(waylat, waylng, wayalt));
@@ -935,7 +933,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             sleep(500);
 
                             if (teamleader == 1) {
-                                serverConnector.send(clientid + ",execall," + teamnum);
+                                client.send(clientid + ",execall," + teamnum);
                             } else {
                                 missioninfo.setText("已保存航点飞行任务，等待编队执行命令。\n" + "经度：" + waylng + " 纬度：" + waylat + "\n高度：" + wayalt + " 速度：" + wayvel);
                             }
@@ -951,7 +949,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             uavstate = UAVState.HOTSAVE;
                             sleep(500);
 
-                            if (teamleader == 1) serverConnector.send(clientid + ",execall," + teamnum);
+                            if (teamleader == 1) client.send(clientid + ",execall," + teamnum);
                             else {
                                 missioninfo.setText("已保存圆周飞行任务，等待编队执行命令。\n" + "圆心经度：" + hotlng + " 圆心纬度：" + hotlat + " 圆心高度：" + hotalt + "\n绕飞半径：" + hotr + " 角速度：" + hotw + " 起始方向：" + hotstart);
                             }
@@ -1070,17 +1068,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             sleep(500);
 
                             if (teamleader == 1) {
-                                serverConnector.send(clientid + ",execall," + teamnum);
+                                client.send(clientid + ",execall," + teamnum);
                             } else {
                                 missioninfo.setText("已保存原地旋转任务，等待编队执行命令。\n" + "旋转速度：" + autorotatew);
                             }
                         }
                     }
-                } catch (IOException e) {
+                } catch (Exception e) {
                     e.printStackTrace();
                     showToast("失败");
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
                 }
             }
         });
@@ -1136,7 +1132,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             @Override
             public void onClick(View v) {
                 try {
-                    serverConnector.send(clientid + ",createteam," + System.currentTimeMillis() % 1000);
+                    client.send(clientid + ",createteam," + System.currentTimeMillis() % 1000);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -1803,8 +1799,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         @Override
         public void run() {
             try {
-                serverConnector.connect();
-            } catch (IOException e) {
+                client.connect();
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }
@@ -2224,6 +2220,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         public Number getY(int index) {
             return iconPoints.get(index).y;
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        client.close();
     }
 
 }
