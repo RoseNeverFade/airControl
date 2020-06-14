@@ -106,20 +106,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private ArrayList<String> rolllist;
     private ArrayList<String> pitchlist;
     private ArrayList<String> yawlist;
-    private PopupWindow popupWindowTeam;
     private PopupWindow popupWindowWay;
     private PopupWindow popupWindowHot;
     private PopupWindow popupWindowCon;
     private PopupWindow popupWindowCserver;
-    private PopupWindow popupWindowJointeam;
     private PopupWindow popupWindowRotate;
     private PopupWindow popupWindowAutorotate;
     private String clientid;
+    private String missionparams;
     private HandlerThread serverHandlerThread;
     private Handler serverHandler;
     private SocketClient client;
-    private int teamnum;
-    private int teamleader;
     private int stopmission;
     private double waylng;
     private double waylat;
@@ -141,10 +138,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private TextView tPitch;
     private TextView tRoll;
     private TextView tYaw;
-    private TextView connectstate;
+    private TextView uavconnectstate;
+    private TextView serverconnectstate;
+    private TextView textcid;
     private Button btwaypoint;
     private Button bthotpoint;
-    private Button btteam;
     private Button btcserver;
     private Button btnDemRecord;//记录经纬数据
     private Button btnDemOutput;//输出经纬数据至文件
@@ -177,10 +175,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Button btnHistoryAnalyze; //Button C
     private XYPlot routePlot;
 
-    private PopupWindow popupWindowResult;
     private PopupWindow popupWindowHistory;
 
-    private Calendar now = Calendar.getInstance();
 
     private DroneData droneData;
     private Button btstop;
@@ -236,7 +232,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         tPitch = (TextView) findViewById(R.id.textPitch);
         tRoll = (TextView) findViewById(R.id.textRoll);
         tYaw = (TextView) findViewById(R.id.textYaw);
-        connectstate = (TextView) findViewById(R.id.connectstate);
+        uavconnectstate = (TextView) findViewById(R.id.uavconnectstate);
+        serverconnectstate = (TextView) findViewById(R.id.serverconnectstate);
+        textcid = (TextView) findViewById(R.id.textcid);
 
         // ---------------设置单击事件-------------------------
         btnDemRecord = (Button) findViewById(R.id.btn_record);
@@ -284,12 +282,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //        });
 
 
-        btteam = (Button) findViewById(R.id.btn_team);
         btwaypoint = (Button) findViewById(R.id.btn_waypoint);
         bthotpoint = (Button) findViewById(R.id.btn_hotpoint);
         btcserver = (Button) findViewById(R.id.btn_cserver);
 
-        btteam.setOnClickListener(this);
         btwaypoint.setOnClickListener(this);
         bthotpoint.setOnClickListener(this);
         btcserver.setOnClickListener(this);
@@ -299,8 +295,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         missioninfo = (TextView) findViewById(R.id.missioninfo);
         btstop = (Button) findViewById(R.id.btn_stop);
 
-        teamnum = 0;
-        teamleader = 0;
 
         timelist = new ArrayList<>();
         lnglist = new ArrayList<>();
@@ -313,7 +307,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         uavstate = UAVState.NONE;
         stopmission = 0;
 
-        clientid = "" + System.currentTimeMillis();
+        clientid = "" + (System.currentTimeMillis()%1000);
+        textcid.setText("id："+clientid);
 
         //可视化设置
         heightPlot = (XYPlot) findViewById(R.id.height_plot);
@@ -424,12 +419,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 outputGPStoFile();
                 break;
 
-
-            case R.id.btn_team:
-                initPopupWindowTeam();
-                /* 这里是位置显示方式,在按钮的左下角 */
-                popupWindowTeam.showAtLocation(findViewById(R.id.main_body), Gravity.RIGHT, 0, 0);
-                break;
             case R.id.btn_waypoint:
                 initPopupWindowWay();
                 /* 这里是位置显示方式,在按钮的左下角 */
@@ -475,54 +464,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
         }
     }
-
-    public void onReceiveData(final String data) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                System.out.println("*****************************:" + data);
-                if (data.contains("connectsuccess")) {
-                    showToast("连接成功");
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            while (true) {
-                                try {
-                                    sleep(500);
-                                    client.send(clientid + ",updatedate," + uavstate.statevalue + String.format(",%.4f,%.4f,%.4f,%.4f,%.4f,%.4f", droneLocationLng, droneLocationLat, droneLocationAlt, droneAttitudePitch, droneAttitudeRoll, droneAttitudeYaw));
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                }
-                            }
-                        }
-                    }).start();
-                } else if (data.contains("connecterror")) {
-                    showToast("连接失败");
-                } else if (data.contains("createsuccess")) {
-                    teamnum = Integer.parseInt(data.split(",")[1]);
-                    teamleader = 1;
-                    showToast("创建成功！\n编队号：" + teamnum);
-                } else if (data.contains("joinsuccess")) {
-                    teamnum = Integer.parseInt(data.split(",")[1]);
-                    showToast("加入编队成功");
-                } else if (data.contains("teamnotfound")) {
-                    showToast("加入编队失败");
-                } else if (data.contains("stopsuccess")) {
-                    missioninfo.setText("未执行飞行任务");
-                } else if (data.contains("finish")) {
-                    missioninfo.setText("未执行飞行任务");
-                    showToast("执行完毕");
-                } else if (data.contains("wayexec")) {
-                    execwaypointmission();
-                } else if (data.contains("hotexec")) {
-                    exechotpointmission();
-                } else if (data.contains("arexec")) {
-                    execarmission();
-                }
-            }
-        });
-    }
-
 
     private void outputGPStoFile() {
         Calendar now = Calendar.getInstance();
@@ -630,9 +571,26 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         client = new SocketClient(uri) {
             @Override
-            public void onMessage(String message) {
-                //message就是接收到的消息
-                showToast("JWebSClientService"+  message);
+            public void onMessage(String data) {
+
+                runOnUiThread(() -> {
+                    System.out.println("*****************************:" + data);
+                    if (data.contains("connectsuccess")) {
+                        showToast("连接成功");
+                        serverconnectstate.setText("服务器：已连接");
+                    } else if (data.contains("connecterror")) {
+                        showToast("连接失败");
+                    } else if (data.contains("missionparams")){
+                        missionparams = data;
+                        client.send("gotmission");
+                    } else if (data.contains("execmission")){
+                        try {
+                            missionmanage();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
             }
         };
         serverHandler.post(new ConnectRunnable());
@@ -690,53 +648,55 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
     }
 
-    protected void initPopupWindowJointeam() {
-        View v = getLayoutInflater().inflate(R.layout.pop_jointeam, null, false);
-        popupWindowJointeam = new PopupWindow(v, 1000, 500, true);
-        popupWindowJointeam.setFocusable(true);
+    protected void missionmanage() throws InterruptedException {
+        String[] missions = missionparams.split(";");
+        String[] head = missions[0].split(",");
+        int cnt = Integer.parseInt(head[0]);
 
-        popupWindowJointeam.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
-        popupWindowJointeam.setBackgroundDrawable(new BitmapDrawable());
-
-        WindowManager.LayoutParams lp = getWindow().getAttributes();
-        lp.alpha = 0.5f;//设置阴影透明度
-        getWindow().setAttributes(lp);
-        popupWindowJointeam.setOnDismissListener(new PopupWindow.OnDismissListener() {
-
-            @Override
-            public void onDismiss() {
-                WindowManager.LayoutParams lp = getWindow().getAttributes();
-                lp.alpha = 1f;
-                getWindow().setAttributes(lp);
+        for (int i=1; i<=cnt; i++){
+            while (uavstate != UAVState.NONE) {
+                sleep(500);
             }
-        });
 
-        /* pop.xml视图里面的控件 */
-        Button btyes = (Button) v.findViewById(R.id.bt_yes);
-        Button btno = (Button) v.findViewById(R.id.bt_no);
-        final TextView etnum = (TextView) v.findViewById(R.id.etnum);
-
-        btyes.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                popupWindowJointeam.dismiss();
-
-                try {
-                    client.send(clientid + ",jointeam," + etnum.getText().toString());
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    showToast("加入编队失败");
-                }
-
+            String[] s = missions[i].split(",");
+            if (missions[i].contains("way")){
+                waylng = Integer.parseInt(s[1]);
+                waylat = Integer.parseInt(s[2]);
+                wayalt = Integer.parseInt(s[3]);
+                wayvel = Integer.parseInt(s[4]);
+                execwaypointmission();
             }
-        });
-
-        btno.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                popupWindowJointeam.dismiss();
+            else if (missions[i].contains("hot")){
+                hotlng = Integer.parseInt(s[1]);
+                hotlat = Integer.parseInt(s[2]);
+                hotalt = Integer.parseInt(s[3]);
+                hotr = Integer.parseInt(s[4]);
+                hotw = Integer.parseInt(s[5]);
+                hotstart =s[6];
+                exechotpointmission();
             }
-        });
+            else if (missions[i].contains("rotate")){
+                int type = 0;
+                if (s[1].contains("西")) type = 41;
+                else if (s[1].contains("北")) type = 42;
+                else if (s[1].contains("东")) type = 43;
+                else if (s[1].contains("南")) type = 44;
+                execrotatemission(type);
+            }
+            else if (missions[i].contains("ar")) {
+                autorotatew = Integer.parseInt(s[1]);
+                execarmission();
+            }
+
+            if (i == 2){
+                client.send(clientid + ",arrivestartpoint");
+            } else if (i == 3) {
+                client.send(clientid + ",finishmission");
+            } else if (i == 4) {
+                client.send(clientid + ",returned");
+            }
+
+        }
     }
 
     protected void execwaypointmission() {
@@ -785,10 +745,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         hotpointMission.setRadius(hotr);
         hotpointMission.setAngularVelocity(hotw);
         HotpointStartPoint startPoint;
-        if (hotstart == "east") startPoint = HotpointStartPoint.EAST;
-        else if (hotstart == "south") startPoint = HotpointStartPoint.SOUTH;
-        else if (hotstart == "west") startPoint = HotpointStartPoint.WEST;
-        else if (hotstart == "north") startPoint = HotpointStartPoint.NORTH;
+        if (hotstart == "东") startPoint = HotpointStartPoint.EAST;
+        else if (hotstart == "南") startPoint = HotpointStartPoint.SOUTH;
+        else if (hotstart == "西") startPoint = HotpointStartPoint.WEST;
+        else if (hotstart == "北") startPoint = HotpointStartPoint.NORTH;
         else startPoint = HotpointStartPoint.NEAREST;
         hotpointMission.setStartPoint(startPoint);
         HotpointHeading heading = HotpointHeading.TOWARDS_HOT_POINT;
@@ -860,6 +820,73 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    protected void execrotatemission(int type){
+        final float rotatedir = (type - 40) * 90 - 180;
+
+
+        if (mFlightController != null) {
+            //                // 原地悬停旋转
+            mFlightController.setVirtualStickModeEnabled(true, new CommonCallbacks.CompletionCallback() {
+                @Override
+                public void onResult(DJIError djiError) {
+//                    System.out.println(djiError.getDescription());
+                }
+            });
+
+            try {
+                sleep(5000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            mFlightController.setYawControlMode(YawControlMode.ANGLE);
+
+        }
+
+        if (mFlightController != null && mFlightController.isVirtualStickControlModeAvailable()) {
+
+
+            new Thread(() -> {
+                String dir[] = {"西", "北", "东", "南"};
+                missioninfo.setText("开始执行无人机转向任务！\n机头转向：" + dir[type - 41]);
+                uavstate = UAVState.ROTATEEXEC;
+                showToast("Execution started!");
+
+                int outtag = 0;
+                while (outtag < 20) {
+                    if (stopmission == 1) {
+                        break;
+                    }
+                    if (Math.abs(rotatedir - droneAttitudeYaw) < 0.1) outtag += 1;
+                    else outtag = 0;
+                    try {
+                        sleep(100);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+//                                YawControlMode tmpyaw =  mFlightController.getYawControlMode();
+//                                System.out.println(tmpyaw);
+//
+                    mFlightController.sendVirtualStickFlightControlData(new FlightControlData((float) droneAttitudePitch, (float) droneAttitudeRoll, rotatedir, (float) droneLocationAlt), new CommonCallbacks.CompletionCallback() {
+                        @Override
+                        public void onResult(DJIError djiError) {
+//                                                showResultToast(djiError);
+                        }
+                    });
+//
+                }
+                stopmission = 0;
+                missioninfo.setText("未执行飞行任务");
+                uavstate = UAVState.NONE;
+                showToast("Execution finished!");
+//
+//
+//
+            }).start();
+
+
+        }
+    }
+
     protected void initPopupWindowConfirm(final int type) {
         View v = getLayoutInflater().inflate(R.layout.pop_confirm, null, false);
         popupWindowCon = new PopupWindow(v, 1000, 500, true);
@@ -886,13 +913,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Button btno = (Button) v.findViewById(R.id.bt_no);
         TextView txtcontitle = (TextView) v.findViewById(R.id.txt_contitle);
 
-        if (type == 21 || type == 31 || type == 51) txtcontitle.setText("保存配置并等待编队命令");
-        else if (type == 1) {
+        if (type == 1) {
             txtcontitle.setText("中止执行任务");
         }
 
         //可视化
-        if (type == 31) {
+        if (type == 30) {
             addCircle(new Point(hotlng, hotlat), hotr);
         }
 
@@ -926,103 +952,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         }
                     } else if (type / 10 == 2) {
                         popupWindowWay.dismiss();
-                        if (type == 22) {
-                            execwaypointmission();
-                        } else {
-                            uavstate = UAVState.WAYSAVE;
-                            sleep(500);
 
-                            if (teamleader == 1) {
-                                client.send(clientid + ",execall," + teamnum);
-                            } else {
-                                missioninfo.setText("已保存航点飞行任务，等待编队执行命令。\n" + "经度：" + waylng + " 纬度：" + waylat + "\n高度：" + wayalt + " 速度：" + wayvel);
-                            }
-                        }
+                        execwaypointmission();
+
                     } else if (type / 10 == 3) {
                         popupWindowHot.dismiss();
                         //TODO:bugfix
                         double xr = hotr / 85360.64873;
                         addCircle(new Point(hotlng, hotlat), xr);
-                        if (type == 32) {
-                            exechotpointmission();
-                        } else {
-                            uavstate = UAVState.HOTSAVE;
-                            sleep(500);
 
-                            if (teamleader == 1) client.send(clientid + ",execall," + teamnum);
-                            else {
-                                missioninfo.setText("已保存圆周飞行任务，等待编队执行命令。\n" + "圆心经度：" + hotlng + " 圆心纬度：" + hotlat + " 圆心高度：" + hotalt + "\n绕飞半径：" + hotr + " 角速度：" + hotw + " 起始方向：" + hotstart);
-                            }
-                        }
+                        exechotpointmission();
+
 
                     } else if (type / 10 == 4) {
                         popupWindowRotate.dismiss();
 
-                        final float rotatedir = (type - 40) * 90 - 180;
 
-
-                        if (mFlightController != null) {
-                            //                // 原地悬停旋转
-                            mFlightController.setVirtualStickModeEnabled(true, new CommonCallbacks.CompletionCallback() {
-                                @Override
-                                public void onResult(DJIError djiError) {
-//                    System.out.println(djiError.getDescription());
-                                }
-                            });
-
-                            try {
-                                sleep(5000);
-                            } catch (InterruptedException e) {
-                                e.printStackTrace();
-                            }
-                            mFlightController.setYawControlMode(YawControlMode.ANGLE);
-
-                        }
-
-                        if (mFlightController != null && mFlightController.isVirtualStickControlModeAvailable()) {
-
-
-                            new Thread(() -> {
-                                String dir[] = {"西", "北", "东", "南"};
-                                missioninfo.setText("开始执行无人机转向任务！\n机头转向：" + dir[type - 41]);
-                                uavstate = UAVState.ROTATEEXEC;
-                                showToast("Execution started!");
-
-                                int outtag = 0;
-                                while (outtag < 20) {
-                                    if (stopmission == 1) {
-                                        break;
-                                    }
-                                    if (Math.abs(rotatedir - droneAttitudeYaw) < 0.1) outtag += 1;
-                                    else outtag = 0;
-                                    try {
-                                        sleep(100);
-                                    } catch (InterruptedException e) {
-                                        e.printStackTrace();
-                                    }
-//                                YawControlMode tmpyaw =  mFlightController.getYawControlMode();
-//                                System.out.println(tmpyaw);
-//
-                                    mFlightController.sendVirtualStickFlightControlData(new FlightControlData((float) droneAttitudePitch, (float) droneAttitudeRoll, rotatedir, (float) droneLocationAlt), new CommonCallbacks.CompletionCallback() {
-                                        @Override
-                                        public void onResult(DJIError djiError) {
-//                                                showResultToast(djiError);
-                                        }
-                                    });
-//
-                                }
-                                stopmission = 0;
-                                missioninfo.setText("未执行飞行任务");
-                                uavstate = UAVState.NONE;
-                                showToast("Execution finished!");
-//
-//
-//
-                            }).start();
-
-
-                        }
-
+                        execrotatemission(type);
 
 //                        if (mFlightController != null && mFlightController.isVirtualStickControlModeAvailable()) {
 //                            new Thread(new Runnable() {
@@ -1061,18 +1007,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                     } else if (type / 10 == 5) {
                         popupWindowAutorotate.dismiss();
-                        if (type == 52) {
-                            execarmission();
-                        } else {
-                            uavstate = UAVState.ARSAVE;
-                            sleep(500);
 
-                            if (teamleader == 1) {
-                                client.send(clientid + ",execall," + teamnum);
-                            } else {
-                                missioninfo.setText("已保存原地旋转任务，等待编队执行命令。\n" + "旋转速度：" + autorotatew);
-                            }
-                        }
+                        execarmission();
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -1087,78 +1023,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 popupWindowCon.dismiss();
             }
         });
-    }
-
-    protected void initPopupWindowTeam() {
-        /* TODO Auto-generated method stub */
-
-        /* 获取自定义布局文件pop.xml的视图 */
-        View popupWindow_view = getLayoutInflater().inflate(R.layout.pop_team, null,
-                false);
-        /* 创建PopupWindow实例,200,150分别是宽度和高度 */
-        popupWindowTeam = new PopupWindow(popupWindow_view, 600, 600, true);
-
-        popupWindowTeam.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
-        popupWindowTeam.setBackgroundDrawable(new BitmapDrawable());
-
-        WindowManager.LayoutParams lp = getWindow().getAttributes();
-        lp.alpha = 0.5f;//设置阴影透明度
-        getWindow().setAttributes(lp);
-        popupWindowTeam.setOnDismissListener(new PopupWindow.OnDismissListener() {
-
-            @Override
-            public void onDismiss() {
-                WindowManager.LayoutParams lp = getWindow().getAttributes();
-                lp.alpha = 1f;
-                getWindow().setAttributes(lp);
-            }
-        });
-
-        /* pop.xml视图里面的控件 */
-        Button btcteam = (Button) popupWindow_view.findViewById(R.id.create_team);
-        Button btjteam = (Button) popupWindow_view.findViewById(R.id.join_team);
-        Button btqteam = (Button) popupWindow_view.findViewById(R.id.quit_team);
-        TextView txtteamstate = (TextView) popupWindow_view.findViewById(R.id.team_state);
-
-        if (teamnum != 0) {
-            txtteamstate.setText("编队号：" + teamnum);
-            btcteam.setEnabled(false);
-            btjteam.setEnabled(false);
-        } else {
-            btqteam.setEnabled(false);
-        }
-
-        btcteam.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                try {
-                    client.send(clientid + ",createteam," + System.currentTimeMillis() % 1000);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                popupWindowTeam.dismiss();
-
-            }
-        });
-
-        btjteam.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                popupWindowTeam.dismiss();
-                initPopupWindowJointeam();
-                popupWindowJointeam.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-            }
-        });
-
-        btqteam.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                teamleader = 0;
-                teamnum = 0;
-                popupWindowTeam.dismiss();
-            }
-        });
-
     }
 
     protected void initPopupWindowWay() {
@@ -1184,39 +1048,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
 
         /* pop.xml视图里面的控件 */
-        Button bttwgo = (Button) popupWindow_view.findViewById(R.id.bt_twgo);
         Button btwgo = (Button) popupWindow_view.findViewById(R.id.bt_wgo);
         final EditText etlng = (EditText) popupWindow_view.findViewById(R.id.et_lng);
         final EditText etlat = (EditText) popupWindow_view.findViewById(R.id.et_lat);
         final EditText etalt = (EditText) popupWindow_view.findViewById(R.id.et_alt);
         final EditText etvel = (EditText) popupWindow_view.findViewById(R.id.et_vel);
 
-
-        if (teamnum == 0) {
-            bttwgo.setEnabled(false);
-        } else {
-            if (teamleader == 0) {
-                bttwgo.setText("保存配置");
-            }
-        }
-
-        bttwgo.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                try {
-                    wayalt = Float.parseFloat(etalt.getText().toString());
-                    waylat = Double.parseDouble(etlat.getText().toString());
-                    waylng = Double.parseDouble(etlng.getText().toString());
-                    wayvel = Float.parseFloat(etvel.getText().toString());
-                    initPopupWindowConfirm(21);
-                    popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-
-                } catch (Exception e) {
-                    showToast("参数不合法");
-                }
-
-            }
-        });
 
         btwgo.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -1226,7 +1063,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     waylat = Double.parseDouble(etlat.getText().toString());
                     waylng = Double.parseDouble(etlng.getText().toString());
                     wayvel = Float.parseFloat(etvel.getText().toString());
-                    initPopupWindowConfirm(22);
+                    initPopupWindowConfirm(20);
                     popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
                 } catch (Exception e) {
                     showToast("参数不合法");
@@ -1259,7 +1096,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
 
         /* pop.xml视图里面的控件 */
-        Button btthgo = (Button) popupWindow_view.findViewById(R.id.bt_thgo);
         Button bthgo = (Button) popupWindow_view.findViewById(R.id.bt_hgo);
         final EditText etlng = (EditText) popupWindow_view.findViewById(R.id.et_lng);
         final EditText etlat = (EditText) popupWindow_view.findViewById(R.id.et_lat);
@@ -1267,38 +1103,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         final EditText etw = (EditText) popupWindow_view.findViewById(R.id.et_w);
         final EditText etr = (EditText) popupWindow_view.findViewById(R.id.et_r);
         final Spinner spstart = (Spinner) popupWindow_view.findViewById(R.id.sp_start);
-
-        if (teamnum == 0) {
-            btthgo.setEnabled(false);
-        } else {
-            if (teamleader == 0) {
-                btthgo.setText("保存配置");
-            }
-        }
-
-        btthgo.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                try {
-                    hotalt = Double.parseDouble(etalt.getText().toString());
-                    hotlat = Double.parseDouble(etlat.getText().toString());
-                    hotlng = Double.parseDouble(etlng.getText().toString());
-                    hotw = Float.parseFloat(etw.getText().toString());
-                    hotr = Double.parseDouble(etr.getText().toString());
-                    String tmp = spstart.getSelectedItem().toString();
-                    if (tmp.contains("东")) hotstart = "east";
-                    else if (tmp.contains("南")) hotstart = "south";
-                    else if (tmp.contains("西")) hotstart = "west";
-                    else if (tmp.contains("北")) hotstart = "north";
-                    initPopupWindowConfirm(31);
-                    popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-                } catch (Exception e) {
-                    showToast("参数不合法");
-                }
-
-
-            }
-        });
 
         bthgo.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -1309,12 +1113,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     hotlng = Double.parseDouble(etlng.getText().toString());
                     hotw = Float.parseFloat(etw.getText().toString());
                     hotr = Double.parseDouble(etr.getText().toString());
-                    String tmp = spstart.getSelectedItem().toString();
-                    if (tmp.contains("东")) hotstart = "east";
-                    else if (tmp.contains("南")) hotstart = "south";
-                    else if (tmp.contains("西")) hotstart = "west";
-                    else if (tmp.contains("北")) hotstart = "north";
-                    initPopupWindowConfirm(32);
+                    hotstart = spstart.getSelectedItem().toString();
+                    initPopupWindowConfirm(30);
                     popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
                 } catch (Exception e) {
                     showToast("参数不合法");
@@ -1421,38 +1221,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
 
         /* pop.xml视图里面的控件 */
-        Button bttargo = (Button) popupWindow_view.findViewById(R.id.bt_targo);
         Button btargo = (Button) popupWindow_view.findViewById(R.id.bt_argo);
         final EditText etw = (EditText) popupWindow_view.findViewById(R.id.et_w);
 
-        if (teamnum == 0) {
-            bttargo.setEnabled(false);
-        } else {
-            if (teamleader == 0) {
-                bttargo.setText("保存配置");
-            }
-        }
-
-        bttargo.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                try {
-                    autorotatew = Float.parseFloat(etw.getText().toString());
-                    initPopupWindowConfirm(51);
-                    popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
-                } catch (Exception e) {
-                    showToast("参数不合法");
-                }
-
-            }
-        });
 
         btargo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 try {
                     autorotatew = Float.parseFloat(etw.getText().toString());
-                    initPopupWindowConfirm(52);
+                    initPopupWindowConfirm(50);
                     popupWindowCon.showAtLocation(findViewById(R.id.main_body), Gravity.CENTER, 0, 0);
                 } catch (Exception e) {
                     showToast("参数不合法");
@@ -1492,6 +1270,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     rolllist.add(String.valueOf(droneAttitudeRoll));
                     SimpleDateFormat df = new SimpleDateFormat("yyyy/MM/dd-HH:mm:ss:SSS");//设置日期格式
                     timelist.add(df.format(new Date()));
+
+                    client.send(clientid + ",updatedate," + droneTime + "," + uavstate.statevalue + String.format(",%.4f,%.4f,%.4f,%.4f,%.4f,%.4f", droneLocationLng, droneLocationLat, droneLocationAlt, droneAttitudePitch, droneAttitudeRoll, droneAttitudeYaw));
+
 
                     runOnUiThread(new Runnable() {
                         @Override
@@ -1603,7 +1384,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             Log.d(TAG, "onProductDisconnect");
                             showToast("Product Disconnected");
                             notifyStatusChange();
-                            connectstate.setText("disconnected");
+                            uavconnectstate.setText("无人机：未连接");
                         }
 
                         @Override
@@ -1611,7 +1392,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             Log.d(TAG, String.format("onProductConnect newProduct:%s", baseProduct));
                             showToast("Product Connected");
                             notifyStatusChange();
-                            connectstate.setText("connected");
+                            uavconnectstate.setText("无人机：已连接");
                             initFlightController();
                         }
 

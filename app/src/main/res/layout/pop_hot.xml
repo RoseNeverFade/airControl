@@ -57,18 +57,11 @@
     />
 
 
-    <Button android:id="@+id/bt_thgo"
-            android:layout_width="100dp"
+    <Button android:id="@+id/bt_hgo"
+            android:layout_width="220dp"
             android:layout_height="40dp"
             android:layout_marginTop="320dp"
             android:layout_marginLeft="20dp"
-            android:text="编队执行"/>
-
-    <Button android:id="@+id/bt_hgo"
-            android:layout_width="100dp"
-            android:layout_height="40dp"
-            android:layout_marginTop="320dp"
-            android:layout_marginLeft="140dp"
             android:text="执行任务"/>
 
     <EditText
