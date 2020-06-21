@@ -583,9 +583,39 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     } else if (data.contains("missionparams")){
                         missionparams = data;
                         client.send("gotmission");
+                    } else if (data.contains("gotostartpoint")){
+                        try {
+                            missionmanage(1, 2);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
                     } else if (data.contains("execmission")){
                         try {
-                            missionmanage();
+                            missionmanage(3, 4);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    } else if (data.contains("stopall")){
+                        if (uavstate == UAVState.WAYEXEC) {
+                            waypointMissionOperator.stopMission(new CommonCallbacks.CompletionCallback() {
+                                @Override
+                                public void onResult(DJIError djiError) {
+                                    showResultToast(djiError);
+                                }
+                            });
+                        } else if (uavstate == UAVState.HOTEXEC) {
+                            hotpointMissionOperator.stop(new CommonCallbacks.CompletionCallback() {
+                                @Override
+                                public void onResult(DJIError djiError) {
+                                    showResultToast(djiError);
+                                }
+                            });
+                        } else if (uavstate == UAVState.ROTATEEXEC || uavstate == UAVState.AREXEC) {
+                            stopmission = 1;
+                        }
+
+                        try {
+                            missionmanage(4, 4);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
@@ -648,12 +678,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
     }
 
-    protected void missionmanage() throws InterruptedException {
+    protected void missionmanage(int start, int end) throws InterruptedException {
         String[] missions = missionparams.split(";");
-        String[] head = missions[0].split(",");
-        int cnt = Integer.parseInt(head[0]);
 
-        for (int i=1; i<=cnt; i++){
+        for (int i=start; i<=end; i++){
             while (uavstate != UAVState.NONE) {
                 sleep(500);
             }
