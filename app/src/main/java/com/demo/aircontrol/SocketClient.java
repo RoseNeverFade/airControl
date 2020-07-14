@@ -6,6 +6,7 @@ import org.java_websocket.handshake.ServerHandshake;
 import java.net.URI;
 
 public class SocketClient extends WebSocketClient {
+    public int connected = 0;
 
     public SocketClient(URI serverUri) {
         super(serverUri);
@@ -13,6 +14,7 @@ public class SocketClient extends WebSocketClient {
 
     @Override
     public void onOpen(ServerHandshake handshakedata) {
+        connected = 1;
         System.out.println( "opened connection" );
     }
 
@@ -24,7 +26,7 @@ public class SocketClient extends WebSocketClient {
 
     @Override
     public void onClose(int code, String reason, boolean remote) {
-        this.send("close");
+        connected = 0;
         System.out.println( "Connection closed by " + ( remote ? "remote peer" : "us" ) );
     }
 

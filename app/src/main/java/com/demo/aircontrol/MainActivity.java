@@ -98,6 +98,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private double droneAttitudeYaw = 0;
     private double droneAttitudePitch = 0;
     private double droneAttitudeRoll = 0;
+    private double droneVelocity = 0;
+    private boolean droneRtk = false;
+    private boolean uavconnected = false;
+    private boolean stopall = false;
+    private String droneFlightMode = "";
     private String droneTime;
     private ArrayList<String> timelist;
     private ArrayList<String> lnglist;
@@ -128,9 +133,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private float hotw;
     private double hotr;
     private String hotstart;
+    private String hotcircles;
     private float autorotatew;
-    private String serverhost;
-    private int serverport;
+    private String arstart;
+    private String arcircles;
+    private String serveruri;
     //显示信息
     private TextView tLng;
     private TextView tLat;
@@ -221,6 +228,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         //copyAssets();
 
         initUI();
+
+//        new Thread(() -> {
+//            do {
+//                try {
+//                    Thread.sleep(500);
+//                    if (reconnectserver && client != null && client.connected == 0){
+//                        connectServer(serveruri);
+//                    }
+//                } catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+//            } while (true);
+//        }).start();
     }
 
     private void initUI() {
@@ -289,8 +309,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         btwaypoint.setOnClickListener(this);
         bthotpoint.setOnClickListener(this);
         btcserver.setOnClickListener(this);
-
-//        new TimeThread().start(); //启动新的线程
 
         missioninfo = (TextView) findViewById(R.id.missioninfo);
         btstop = (Button) findViewById(R.id.btn_stop);
@@ -582,20 +600,37 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         showToast("连接失败");
                     } else if (data.contains("missionparams")){
                         missionparams = data;
-                        client.send("gotmission");
+                        client.send(clientid + ",gotmission");
                     } else if (data.contains("gotostartpoint")){
-                        try {
-                            missionmanage(1, 2);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
+                        new Thread(() -> {
+                            try {
+                                missionmanage(1, 2);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }).start();
                     } else if (data.contains("execmission")){
+                        new Thread(() -> {
+                            try {
+                                missionmanage(3, 4);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }).start();
+                    } else if (data.contains("startlanding")){
+                        mFlightController.startLanding(new CommonCallbacks.CompletionCallback() {
+                            @Override
+                            public void onResult(DJIError djiError) {
+                                showResultToast(djiError);
+                            }
+                        });
+                    } else if (data.contains("stopall")){
+                        stopall = true;
                         try {
-                            missionmanage(3, 4);
+                            sleep(400);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
-                    } else if (data.contains("stopall")){
                         if (uavstate == UAVState.WAYEXEC) {
                             waypointMissionOperator.stopMission(new CommonCallbacks.CompletionCallback() {
                                 @Override
@@ -613,13 +648,25 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         } else if (uavstate == UAVState.ROTATEEXEC || uavstate == UAVState.AREXEC) {
                             stopmission = 1;
                         }
+                        new Thread(() -> {
+                            try {
+                                while (uavstate != UAVState.NONE) {
+                                    sleep(2000);
+                                }
+                                missionmanage(4, 4);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }).start();
 
-                        try {
-                            missionmanage(4, 4);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
                     }
+                });
+            }
+
+            @Override
+            public void onClose(int code, String reason, boolean remote) {
+                runOnUiThread(() -> {
+                    serverconnectstate.setText("服务器：未连接");
                 });
             }
         };
@@ -657,10 +704,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             @Override
             public void onClick(View v) {
                 popupWindowCserver.dismiss();
-                String addr = txtaddr.getText().toString();
+                serveruri = "ws://" + txtaddr.getText().toString() + "/link/";
                 try {
-//                        connectServer(addr);
-                    connectServer("ws://192.168.0.107:8000/link/");
+                    connectServer(serveruri);
+//                    connectServer("ws://192.168.43.205:8000/link/");
                     sleep(3000);
                     client.send("#" + clientid);
 
@@ -683,25 +730,31 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         for (int i=start; i<=end; i++){
             while (uavstate != UAVState.NONE) {
-                sleep(500);
+                sleep(2000);
             }
+            uavstate = UAVState.READY;
 
             String[] s = missions[i].split(",");
             if (missions[i].contains("way")){
-                waylng = Integer.parseInt(s[1]);
-                waylat = Integer.parseInt(s[2]);
-                wayalt = Integer.parseInt(s[3]);
-                wayvel = Integer.parseInt(s[4]);
-                execwaypointmission();
+                waylng = Double.parseDouble(s[1]);
+                waylat = Double.parseDouble(s[2]);
+                wayalt = Float.parseFloat(s[3]);
+                wayvel = Float.parseFloat(s[4]);
+                new Thread(() -> {
+                    execwaypointmission();
+                }).start();
             }
             else if (missions[i].contains("hot")){
-                hotlng = Integer.parseInt(s[1]);
-                hotlat = Integer.parseInt(s[2]);
-                hotalt = Integer.parseInt(s[3]);
-                hotr = Integer.parseInt(s[4]);
-                hotw = Integer.parseInt(s[5]);
-                hotstart =s[6];
-                exechotpointmission();
+                hotlng = Double.parseDouble(s[1]);
+                hotlat = Double.parseDouble(s[2]);
+                hotalt = Float.parseFloat(s[3]);
+                hotr = Double.parseDouble(s[4]);
+                hotw = Float.parseFloat(s[5]);
+                hotstart = s[6];
+                hotcircles = s[7];
+                new Thread(() -> {
+                    exechotpointmission();
+                }).start();
             }
             else if (missions[i].contains("rotate")){
                 int type = 0;
@@ -709,11 +762,32 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 else if (s[1].contains("北")) type = 42;
                 else if (s[1].contains("东")) type = 43;
                 else if (s[1].contains("南")) type = 44;
-                execrotatemission(type);
+                final int t = type;
+                new Thread(() -> {
+                    execrotatemission(t);
+                }).start();
             }
             else if (missions[i].contains("ar")) {
-                autorotatew = Integer.parseInt(s[1]);
-                execarmission();
+                autorotatew = Float.parseFloat(s[1]);
+                arstart = s[2];
+                arcircles = s[3];
+                new Thread(() -> {
+                    execarmission();
+                }).start();
+            }
+
+            if (uavstate == UAVState.ERROR){
+                client.send(clientid + ",execerror");
+                uavstate = UAVState.NONE;
+                return ;
+            }
+
+            while (uavstate != UAVState.NONE) {
+                if (stopall) {
+                    stopall = false;
+                    return ;
+                }
+                sleep(200);
             }
 
             if (i == 2){
@@ -739,7 +813,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         builder.headingMode(WaypointMissionHeadingMode.AUTO);
         builder.repeatTimes(1);
         List<Waypoint> waypointList = new ArrayList<>();
-        showToast(droneLocationLat+","+droneLocationLng);
         waypointList.add(new Waypoint(droneLocationLat, droneLocationLng, wayalt));
         waypointList.add(new Waypoint(waylat, waylng, wayalt));
         builder.waypointList(waypointList).waypointCount(waypointList.size());
@@ -761,6 +834,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             @Override
             public void onResult(DJIError djiError) {
                 showResultToast(djiError);
+                if (djiError != null) uavstate = UAVState.ERROR;
             }
         });
     }
@@ -773,10 +847,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         hotpointMission.setRadius(hotr);
         hotpointMission.setAngularVelocity(hotw);
         HotpointStartPoint startPoint;
-        if (hotstart == "东") startPoint = HotpointStartPoint.EAST;
-        else if (hotstart == "南") startPoint = HotpointStartPoint.SOUTH;
-        else if (hotstart == "西") startPoint = HotpointStartPoint.WEST;
-        else if (hotstart == "北") startPoint = HotpointStartPoint.NORTH;
+        if (hotstart.equals("东")) startPoint = HotpointStartPoint.EAST;
+        else if (hotstart.equals("南")) startPoint = HotpointStartPoint.SOUTH;
+        else if (hotstart.equals("西")) startPoint = HotpointStartPoint.WEST;
+        else if (hotstart.equals("北")) startPoint = HotpointStartPoint.NORTH;
         else startPoint = HotpointStartPoint.NEAREST;
         hotpointMission.setStartPoint(startPoint);
         HotpointHeading heading = HotpointHeading.TOWARDS_HOT_POINT;
@@ -785,8 +859,73 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             @Override
             public void onResult(DJIError djiError) {
                 showResultToast(djiError);
+                if (djiError != null) uavstate = UAVState.ERROR;
             }
         });
+
+        ArrayList<Double> stoppoint = new ArrayList<>();
+        if (hotcircles.equals("1")){
+            if (hotstart.equals("东")) stoppoint.add(-90.0);
+            else if (hotstart.equals("南")) stoppoint.add(0.0);
+            else if (hotstart.equals("西")) stoppoint.add(90.0);
+            else if (hotstart.equals("北")) {
+                stoppoint.add(180.0);
+                stoppoint.add(-180.0);
+            }
+        } else if (hotcircles.equals("1/2")) {
+            if (hotstart.equals("东")) stoppoint.add(90.0);
+            else if (hotstart.equals("南")) {
+                stoppoint.add(180.0);
+                stoppoint.add(-180.0);
+            } else if (hotstart.equals("西")) stoppoint.add(-90.0);
+            else if (hotstart.equals("北")) stoppoint.add(0.0);
+        } else if (hotcircles.equals("1/4")){
+            if (hotstart.equals("东")) {
+                stoppoint.add(180.0);
+                stoppoint.add(-180.0);
+                stoppoint.add(0.0);
+            }
+            else if (hotstart.equals("南")) {
+                stoppoint.add(90.0);
+                stoppoint.add(-90.0);
+            } else if (hotstart.equals("西")) {
+                stoppoint.add(180.0);
+                stoppoint.add(-180.0);
+                stoppoint.add(0.0);
+            }
+            else if (hotstart.equals("北")) {
+                stoppoint.add(90.0);
+                stoppoint.add(-90.0);
+            }
+        }
+
+        if (hotcircles.equals("1")){
+            try {
+                sleep(10000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        int len = stoppoint.size();
+        while (true){
+            try {
+                sleep(50);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            for (int i=0; i<len; i++){
+                if (Math.abs(stoppoint.get(i)-droneAttitudeYaw) < 3){
+                    hotpointMissionOperator.stop(new CommonCallbacks.CompletionCallback() {
+                        @Override
+                        public void onResult(DJIError djiError) {
+                            showResultToast(djiError);
+                        }
+                    });
+                    return ;
+                }
+            }
+        }
     }
 
     protected void execarmission() {
@@ -836,6 +975,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //
                     mFlightController.sendVirtualStickFlightControlData(new FlightControlData((float) droneAttitudePitch, (float) droneAttitudeRoll, autorotatew, (float) droneLocationAlt), djiError -> {
                         showResultToast(djiError);
+                        if (djiError != null) uavstate = UAVState.ERROR;
                     });
 //
                 }
@@ -844,7 +984,64 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //
             }).start();
 
+            ArrayList<Double> stoppoint = new ArrayList<>();
+            if (arcircles.equals("1")){
+                if (arstart.equals("东")) stoppoint.add(90.0);
+                else if (arstart.equals("南")) {
+                    stoppoint.add(180.0);
+                    stoppoint.add(-180.0);
+                } else if (arstart.equals("西")) stoppoint.add(-90.0);
+                else if (arstart.equals("北")) stoppoint.add(0.0);
+            } else if (arcircles.equals("1/2")) {
+                if (arstart.equals("东")) stoppoint.add(-90.0);
+                else if (arstart.equals("南")) stoppoint.add(0.0);
+                else if (arstart.equals("西")) stoppoint.add(90.0);
+                else if (arstart.equals("北")) {
+                    stoppoint.add(180.0);
+                    stoppoint.add(-180.0);
+                }
+            } else if (arcircles.equals("1/4")){
+                if (arstart.equals("东")) {
+                    stoppoint.add(180.0);
+                    stoppoint.add(-180.0);
+                    stoppoint.add(0.0);
+                }
+                else if (arstart.equals("南")) {
+                    stoppoint.add(90.0);
+                    stoppoint.add(-90.0);
+                } else if (arstart.equals("西")) {
+                    stoppoint.add(180.0);
+                    stoppoint.add(-180.0);
+                    stoppoint.add(0.0);
+                }
+                else if (arstart.equals("北")) {
+                    stoppoint.add(90.0);
+                    stoppoint.add(-90.0);
+                }
+            }
 
+            if (arcircles.equals("1")){
+                try {
+                    sleep(10000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            int len = stoppoint.size();
+            while (true){
+                try {
+                    sleep(50);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                for (int i=0; i<len; i++){
+                    if (Math.abs(stoppoint.get(i)-droneAttitudeYaw) < 3){
+                        stopmission = 1;
+                        return ;
+                    }
+                }
+            }
         }
     }
 
@@ -884,10 +1081,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     if (stopmission == 1) {
                         break;
                     }
-                    if (Math.abs(rotatedir - droneAttitudeYaw) < 0.1) outtag += 1;
+                    if (type != 44 && Math.abs(rotatedir - droneAttitudeYaw) < 0.1 || type == 44 && (Math.abs(rotatedir - Math.abs(droneAttitudeYaw)) < 0.1)) outtag += 1;
                     else outtag = 0;
                     try {
-                        sleep(100);
+                        sleep(50);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -897,7 +1094,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     mFlightController.sendVirtualStickFlightControlData(new FlightControlData((float) droneAttitudePitch, (float) droneAttitudeRoll, rotatedir, (float) droneLocationAlt), new CommonCallbacks.CompletionCallback() {
                         @Override
                         public void onResult(DJIError djiError) {
-//                                                showResultToast(djiError);
+                            showResultToast(djiError);
+                            if (djiError != null) uavstate = UAVState.ERROR;
                         }
                     });
 //
@@ -980,23 +1178,27 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         }
                     } else if (type / 10 == 2) {
                         popupWindowWay.dismiss();
-
-                        execwaypointmission();
+                        new Thread(() -> {
+                            execwaypointmission();
+                        }).start();
 
                     } else if (type / 10 == 3) {
                         popupWindowHot.dismiss();
                         //TODO:bugfix
                         double xr = hotr / 85360.64873;
                         addCircle(new Point(hotlng, hotlat), xr);
-
-                        exechotpointmission();
+                        new Thread(() -> {
+                            hotcircles = "1";
+                            exechotpointmission();
+                        }).start();
 
 
                     } else if (type / 10 == 4) {
                         popupWindowRotate.dismiss();
 
-
-                        execrotatemission(type);
+                        new Thread(() -> {
+                            execrotatemission(type);
+                        }).start();
 
 //                        if (mFlightController != null && mFlightController.isVirtualStickControlModeAvailable()) {
 //                            new Thread(new Runnable() {
@@ -1035,8 +1237,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                     } else if (type / 10 == 5) {
                         popupWindowAutorotate.dismiss();
-
-                        execarmission();
+                        new Thread(() -> {
+                            arstart = "东";
+                            arcircles = "1";
+                            execarmission();
+                        }).start();
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -1288,7 +1493,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     droneAttitudePitch = djiFlightControllerCurrentState.getAttitude().pitch;
                     droneAttitudeRoll = djiFlightControllerCurrentState.getAttitude().roll;
                     droneAttitudeYaw = djiFlightControllerCurrentState.getAttitude().yaw;
-                    droneTime = "" + now.get(Calendar.YEAR) + '_' + (now.get(Calendar.MONTH)+1) + '_' + now.get(Calendar.DAY_OF_MONTH) + '-' + now.get(Calendar.HOUR_OF_DAY) + ':' + now.get(Calendar.MINUTE) + ':' + now.get(Calendar.SECOND);
+                    SimpleDateFormat df = new SimpleDateFormat("yyyy/MM/dd-HH:mm:ss:SSS");//设置日期格式
+                    droneTime = df.format(new Date());
+                    droneRtk = mFlightController.getRTK().isConnected();
+                    droneFlightMode = mFlightController.getState().getFlightModeString();
+                    double x = mFlightController.getState().getVelocityX();
+                    double y = mFlightController.getState().getVelocityY();
+                    double z = mFlightController.getState().getVelocityZ();
+                    droneVelocity = Math.sqrt(x*x+y*y+z*z);
 
                     lnglist.add(String.valueOf(droneLocationLng));
                     latlist.add(String.valueOf(droneLocationLat));
@@ -1296,10 +1508,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     yawlist.add(String.valueOf(droneAttitudeYaw));
                     pitchlist.add(String.valueOf(droneAttitudePitch));
                     rolllist.add(String.valueOf(droneAttitudeRoll));
-                    SimpleDateFormat df = new SimpleDateFormat("yyyy/MM/dd-HH:mm:ss:SSS");//设置日期格式
                     timelist.add(df.format(new Date()));
 
-                    client.send(clientid + ",updatedate," + droneTime + "," + uavstate.statevalue + String.format(",%.4f,%.4f,%.4f,%.4f,%.4f,%.4f", droneLocationLng, droneLocationLat, droneLocationAlt, droneAttitudePitch, droneAttitudeRoll, droneAttitudeYaw));
+                    if (client != null && client.connected == 1){
+                        try {
+                            client.send(clientid + ",updatedata," + droneTime + "," + uavstate.statevalue + String.format(",%.7f,%.7f,%.7f,%.7f,%.7f,%.7f,%.7f,%b,%b,", droneLocationLng, droneLocationLat, droneLocationAlt, droneAttitudePitch, droneAttitudeRoll, droneAttitudeYaw, droneVelocity, droneRtk, uavconnected) + droneFlightMode);
+                        } catch (Exception e){
+                            e.printStackTrace();
+                        }
+                    }
 
 
                     runOnUiThread(new Runnable() {
@@ -1413,6 +1630,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             showToast("Product Disconnected");
                             notifyStatusChange();
                             uavconnectstate.setText("无人机：未连接");
+                            uavconnected = false;
                         }
 
                         @Override
@@ -1421,6 +1639,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             showToast("Product Connected");
                             notifyStatusChange();
                             uavconnectstate.setText("无人机：已连接");
+                            uavconnected = true;
                             initFlightController();
                         }
 
@@ -1594,7 +1813,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     enum UAVState {
-        NONE(0), WAYEXEC(1), HOTEXEC(2), ROTATEEXEC(3), AREXEC(4), WAYSAVE(5), HOTSAVE(6), ARSAVE(7);
+        NONE(0), WAYEXEC(1), HOTEXEC(2), ROTATEEXEC(3), AREXEC(4), READY(5), ERROR(6);
         private int statevalue;
 
         UAVState(int v) {
