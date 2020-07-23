@@ -26,6 +26,7 @@ import com.demo.aircontrol.util.model.SceneLoader;
 import dji.common.error.DJIError;
 import dji.common.error.DJISDKError;
 import dji.common.flightcontroller.FlightControllerState;
+import dji.common.flightcontroller.RTKState;
 import dji.common.flightcontroller.virtualstick.FlightControlData;
 import dji.common.flightcontroller.virtualstick.YawControlMode;
 import dji.common.mission.hotpoint.HotpointHeading;
@@ -94,6 +95,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private HotpointMissionOperator hotpointMissionOperator = null;
     //飞控数据
     private double droneLocationLat = 181, droneLocationLng = 181;
+    private double droneRtkLat = 0, droneRtkLng = 0;
     private double droneLocationAlt = 0;
     private double droneAttitudeYaw = 0;
     private double droneAttitudePitch = 0;
@@ -736,12 +738,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
             String[] s = missions[i].split(",");
             if (missions[i].contains("way")){
-                waylng = Double.parseDouble(s[1]);
-                waylat = Double.parseDouble(s[2]);
-                wayalt = Float.parseFloat(s[3]);
-                wayvel = Float.parseFloat(s[4]);
+//                waylng = Double.parseDouble(s[1]);
+//                waylat = Double.parseDouble(s[2]);
+//                wayalt = Float.parseFloat(s[3]);
+//                wayvel = Float.parseFloat(s[4]);
                 new Thread(() -> {
-                    execwaypointmission();
+                    execwaypointmission(2, s);
                 }).start();
             }
             else if (missions[i].contains("hot")){
@@ -801,10 +803,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    protected void execwaypointmission() {
+    protected void execwaypointmission(int type, String[] s) {
         WaypointMission waypointMission = null;
         WaypointMission.Builder builder = new WaypointMission.Builder();
-        builder.autoFlightSpeed(wayvel);
         builder.maxFlightSpeed(10f);
         builder.setExitMissionOnRCSignalLostEnabled(false);
         builder.finishedAction(WaypointMissionFinishedAction.NO_ACTION);
@@ -813,8 +814,27 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         builder.headingMode(WaypointMissionHeadingMode.AUTO);
         builder.repeatTimes(1);
         List<Waypoint> waypointList = new ArrayList<>();
-        waypointList.add(new Waypoint(droneLocationLat, droneLocationLng, wayalt));
-        waypointList.add(new Waypoint(waylat, waylng, wayalt));
+        if (type == 1){
+            builder.autoFlightSpeed(wayvel);
+            waypointList.add(new Waypoint(droneLocationLat, droneLocationLng, wayalt));
+            waypointList.add(new Waypoint(waylat, waylng, wayalt));
+        }
+        else if (type == 2){
+            int len = Integer.parseInt(s[1]);
+            float vel = Float.parseFloat(s[2]);
+            int staytime;
+            builder.autoFlightSpeed(vel);
+            waypointList.add(new Waypoint(droneLocationLat, droneLocationLng, Float.parseFloat(s[5])));
+            Waypoint eachWaypoint;
+            for (int i=0; i<len; i++){
+                eachWaypoint = new Waypoint(Double.parseDouble(s[i*4+4]), Double.parseDouble(s[i*4+3]), Float.parseFloat(s[i*4+5]));
+                staytime = Integer.parseInt(s[i*4+6]);
+                if (staytime > 0){
+                    eachWaypoint.addAction(new WaypointAction(WaypointActionType.STAY, staytime));
+                }
+                waypointList.add(eachWaypoint);
+            }
+        }
         builder.waypointList(waypointList).waypointCount(waypointList.size());
         waypointMission = builder.build();
         DJIError djiError = waypointMissionOperator.loadMission(waypointMission);
@@ -1179,7 +1199,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     } else if (type / 10 == 2) {
                         popupWindowWay.dismiss();
                         new Thread(() -> {
-                            execwaypointmission();
+                            execwaypointmission(1, new String[1]);
                         }).start();
 
                     } else if (type / 10 == 3) {
@@ -1495,7 +1515,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     droneAttitudeYaw = djiFlightControllerCurrentState.getAttitude().yaw;
                     SimpleDateFormat df = new SimpleDateFormat("yyyy/MM/dd-HH:mm:ss:SSS");//设置日期格式
                     droneTime = df.format(new Date());
-                    droneRtk = mFlightController.getRTK().isConnected();
                     droneFlightMode = mFlightController.getState().getFlightModeString();
                     double x = mFlightController.getState().getVelocityX();
                     double y = mFlightController.getState().getVelocityY();
@@ -1512,7 +1531,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                     if (client != null && client.connected == 1){
                         try {
-                            client.send(clientid + ",updatedata," + droneTime + "," + uavstate.statevalue + String.format(",%.7f,%.7f,%.7f,%.7f,%.7f,%.7f,%.7f,%b,%b,", droneLocationLng, droneLocationLat, droneLocationAlt, droneAttitudePitch, droneAttitudeRoll, droneAttitudeYaw, droneVelocity, droneRtk, uavconnected) + droneFlightMode);
+                            client.send(clientid + ",updatedata," + droneTime + "," + uavstate.statevalue + String.format(",%.7f,%.7f,%.7f,%.7f,%.7f,%.7f,%.7f,%b,", droneLocationLng, droneLocationLat, droneLocationAlt, droneAttitudePitch, droneAttitudeRoll, droneAttitudeYaw, droneVelocity, uavconnected) + droneFlightMode);
                         } catch (Exception e){
                             e.printStackTrace();
                         }
@@ -1537,6 +1556,28 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     rotateModel(droneAttitudeYaw, droneAttitudePitch, droneAttitudeRoll);
                 }
             });
+
+            if (mFlightController.getRTK().isConnected()){
+                mFlightController.getRTK().setStateCallback(new RTKState.Callback() {
+                    @Override
+                    public void onUpdate(RTKState rtkState) {
+                        SimpleDateFormat df = new SimpleDateFormat("yyyy/MM/dd-HH:mm:ss:SSS");//设置日期格式
+                        droneTime = df.format(new Date());
+
+                        droneRtk = rtkState.isRTKBeingUsed();
+                        droneRtkLat = rtkState.getMobileStationLocation().getLatitude();
+                        droneRtkLng = rtkState.getMobileStationLocation().getLongitude();
+
+                        if (client != null && client.connected == 1){
+                            try {
+                                client.send(clientid + ",updatertk," + droneTime + String.format(",%b,%.7f,%.7f", droneRtk, droneRtkLng, droneRtkLat));
+                            } catch (Exception e){
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+                });
+            }
 
 
             if (waypointMissionOperator == null) {
@@ -1712,7 +1753,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             @Override
             public void onExecutionStart() {
                 showToast("Execution started!");
-                missioninfo.setText("开始执行圆形飞行任务！\n圆心经度：" + hotlng + " 圆心纬度：" + hotlat + " 圆心高度：" + hotalt + "\n绕飞半径：" + hotr + " 角速度：" + hotw + " 起始方向：" + hotstart);
+//                missioninfo.setText("开始执行圆形飞行任务！\n圆心经度：" + hotlng + " 圆心纬度：" + hotlat + " 圆心高度：" + hotalt + "\n绕飞半径：" + hotr + " 角速度：" + hotw + " 起始方向：" + hotstart);
+                missioninfo.setText("开始执行圆形飞行任务！\n");
 
                 uavstate = UAVState.HOTEXEC;
             }
@@ -1770,7 +1812,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             @Override
             public void onExecutionStart() {
                 showToast("Execution started!");
-                missioninfo.setText("开始执行航点飞行任务！\n" + "经度：" + waylng + " 纬度：" + waylat + "\n高度：" + wayalt + " 速度：" + wayvel);
+//                missioninfo.setText("开始执行航点飞行任务！\n" + "经度：" + waylng + " 纬度：" + waylat + "\n高度：" + wayalt + " 速度：" + wayvel);
+                missioninfo.setText("开始执行航点飞行任务！\n");
                 uavstate = UAVState.WAYEXEC;
             }
 
