@@ -1,7 +1,9 @@
 package com.demo.aircontrol;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -156,6 +158,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Button btnDemRecord;//记录经纬数据
     private Button btnDemOutput;//输出经纬数据至文件
     private TextView missioninfo;
+
+    SharedPreferences sp = null;
 
     //可视化相关
     ScatterSeries routeScatters;
@@ -323,6 +327,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         yawlist = new ArrayList<>();
         pitchlist = new ArrayList<>();
         rolllist = new ArrayList<>();
+
+        sp = this.getSharedPreferences("params", Context.MODE_PRIVATE);
 
         uavstate = UAVState.NONE;
         stopmission = 0;
@@ -602,6 +608,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         showToast("连接失败");
                     } else if (data.contains("missionparams")){
                         missionparams = data;
+                        showToast("gotmission");
                         client.send(clientid + ",gotmission");
                     } else if (data.contains("gotostartpoint")){
                         new Thread(() -> {
@@ -701,10 +708,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Button btno = (Button) v.findViewById(R.id.bt_no);
         final TextView txtaddr = (TextView) v.findViewById(R.id.etip);
 
+        txtaddr.setText(sp.getString("addr", ""));
 
         btyes.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                SharedPreferences.Editor editor = sp.edit();
+                editor.putString("addr", txtaddr.getText().toString());
+                editor.commit();
                 popupWindowCserver.dismiss();
                 serveruri = "ws://" + txtaddr.getText().toString() + "/link/";
                 try {
@@ -1197,13 +1208,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             missioninfo.setText("未执行飞行任务");
                         }
                     } else if (type / 10 == 2) {
-                        popupWindowWay.dismiss();
                         new Thread(() -> {
                             execwaypointmission(1, new String[1]);
                         }).start();
 
+                        popupWindowWay.dismiss();
                     } else if (type / 10 == 3) {
-                        popupWindowHot.dismiss();
                         //TODO:bugfix
                         double xr = hotr / 85360.64873;
                         addCircle(new Point(hotlng, hotlat), xr);
@@ -1212,6 +1222,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             exechotpointmission();
                         }).start();
 
+                        popupWindowHot.dismiss();
 
                     } else if (type / 10 == 4) {
                         popupWindowRotate.dismiss();
@@ -1287,18 +1298,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         popupWindowWay.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
         popupWindowWay.setBackgroundDrawable(new BitmapDrawable());
 
-        WindowManager.LayoutParams lp = getWindow().getAttributes();
-        lp.alpha = 0.5f;//设置阴影透明度
-        getWindow().setAttributes(lp);
-        popupWindowWay.setOnDismissListener(new PopupWindow.OnDismissListener() {
-
-            @Override
-            public void onDismiss() {
-                WindowManager.LayoutParams lp = getWindow().getAttributes();
-                lp.alpha = 1f;
-                getWindow().setAttributes(lp);
-            }
-        });
 
         /* pop.xml视图里面的控件 */
         Button btwgo = (Button) popupWindow_view.findViewById(R.id.bt_wgo);
@@ -1307,10 +1306,36 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         final EditText etalt = (EditText) popupWindow_view.findViewById(R.id.et_alt);
         final EditText etvel = (EditText) popupWindow_view.findViewById(R.id.et_vel);
 
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.alpha = 0.5f;//设置阴影透明度
+        getWindow().setAttributes(lp);
+        popupWindowWay.setOnDismissListener(new PopupWindow.OnDismissListener() {
+
+            @Override
+            public void onDismiss() {
+                SharedPreferences.Editor editor = sp.edit();
+                editor.putString("waylng", etlng.getText().toString());
+                editor.putString("waylat", etlat.getText().toString());
+                editor.putString("wayalt", etalt.getText().toString());
+                editor.putString("wayvel", etvel.getText().toString());
+                editor.commit();
+
+                WindowManager.LayoutParams lp = getWindow().getAttributes();
+                lp.alpha = 1f;
+                getWindow().setAttributes(lp);
+            }
+        });
+
+
+        etlng.setText(sp.getString("waylng", ""));
+        etlat.setText(sp.getString("waylat", ""));
+        etalt.setText(sp.getString("wayalt", ""));
+        etvel.setText(sp.getString("wayvel", ""));
 
         btwgo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+
                 try {
                     wayalt = Float.parseFloat(etalt.getText().toString());
                     waylat = Double.parseDouble(etlat.getText().toString());
@@ -1335,19 +1360,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         popupWindowHot.setOutsideTouchable(true);  //设置点击屏幕其它地方弹出框消失
         popupWindowHot.setBackgroundDrawable(new BitmapDrawable());
 
-        WindowManager.LayoutParams lp = getWindow().getAttributes();
-        lp.alpha = 0.5f;//设置阴影透明度
-        getWindow().setAttributes(lp);
-        popupWindowHot.setOnDismissListener(new PopupWindow.OnDismissListener() {
-
-            @Override
-            public void onDismiss() {
-                WindowManager.LayoutParams lp = getWindow().getAttributes();
-                lp.alpha = 1f;
-                getWindow().setAttributes(lp);
-            }
-        });
-
         /* pop.xml视图里面的控件 */
         Button bthgo = (Button) popupWindow_view.findViewById(R.id.bt_hgo);
         final EditText etlng = (EditText) popupWindow_view.findViewById(R.id.et_lng);
@@ -1357,9 +1369,43 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         final EditText etr = (EditText) popupWindow_view.findViewById(R.id.et_r);
         final Spinner spstart = (Spinner) popupWindow_view.findViewById(R.id.sp_start);
 
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.alpha = 0.5f;//设置阴影透明度
+        getWindow().setAttributes(lp);
+        popupWindowHot.setOnDismissListener(new PopupWindow.OnDismissListener() {
+
+            @Override
+            public void onDismiss() {
+
+                SharedPreferences.Editor editor = sp.edit();
+                editor.putString("hotlng", etlng.getText().toString());
+                editor.putString("hotlat", etlat.getText().toString());
+                editor.putString("hotalt", etalt.getText().toString());
+                editor.putString("hotw", etw.getText().toString());
+                editor.putString("hotr", etr.getText().toString());
+                editor.putInt("hotstart", spstart.getSelectedItemPosition());
+                editor.commit();
+
+                WindowManager.LayoutParams lp = getWindow().getAttributes();
+                lp.alpha = 1f;
+                getWindow().setAttributes(lp);
+            }
+        });
+
+
+
+        etlng.setText(sp.getString("hotlng", ""));
+        etlat.setText(sp.getString("hotlat", ""));
+        etalt.setText(sp.getString("hotalt", ""));
+        etw.setText(sp.getString("hotw", ""));
+        etr.setText(sp.getString("hotr", ""));
+        spstart.setSelection(sp.getInt("hotstart", 0));
+
         bthgo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+
+
                 try {
                     hotalt = Double.parseDouble(etalt.getText().toString());
                     hotlat = Double.parseDouble(etlat.getText().toString());
@@ -1477,10 +1523,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Button btargo = (Button) popupWindow_view.findViewById(R.id.bt_argo);
         final EditText etw = (EditText) popupWindow_view.findViewById(R.id.et_w);
 
+        etw.setText(sp.getString("autorotatew", ""));
 
         btargo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+
+                SharedPreferences.Editor editor = sp.edit();
+                editor.putString("autorotatew", etw.getText().toString());
+                editor.commit();
+
                 try {
                     autorotatew = Float.parseFloat(etw.getText().toString());
                     initPopupWindowConfirm(50);
@@ -1713,6 +1765,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                         @Override
                         public void onDatabaseDownloadProgress(long l, long l1) {
+
+                        }
+
+                        @Override
+                        public void onProductChanged(BaseProduct baseProduct){
 
                         }
 
