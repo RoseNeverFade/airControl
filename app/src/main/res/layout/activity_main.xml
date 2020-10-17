@@ -48,7 +48,31 @@
                 android:layout_width="130dp"
                 android:layout_height="wrap_content"
                 android:text="服务器：未连接"
-                app:layout_constraintTop_toBottomOf="@+id/uavconnectstate" app:layout_constraintBottom_toTopOf="@+id/textTLng"
+                app:layout_constraintTop_toBottomOf="@+id/uavconnectstate" app:layout_constraintBottom_toTopOf="@+id/textuavstate"
+                app:layout_constraintStart_toStartOf="@+id/textuavstate"/>
+
+            <TextView
+                android:id="@+id/textuavstate"
+                android:layout_width="130dp"
+                android:layout_height="wrap_content"
+                android:text="State："
+                app:layout_constraintTop_toBottomOf="@+id/serverconnectstate" app:layout_constraintBottom_toTopOf="@+id/textreturnalt"
+                app:layout_constraintStart_toStartOf="@+id/returnalt"/>
+
+            <TextView
+                android:id="@+id/textreturnalt"
+                android:layout_width="130dp"
+                android:layout_height="wrap_content"
+                android:text="返航高度"
+                app:layout_constraintTop_toBottomOf="@+id/textuavstate" app:layout_constraintBottom_toTopOf="@+id/returnalt"
+                app:layout_constraintStart_toStartOf="@+id/textLng"/>
+
+            <TextView
+                android:id="@+id/returnalt"
+                android:layout_width="130dp"
+                android:layout_height="wrap_content"
+                android:text="[返航高度]"
+                app:layout_constraintTop_toBottomOf="@+id/textreturnalt" app:layout_constraintBottom_toTopOf="@+id/textTLng"
                 app:layout_constraintStart_toStartOf="@+id/textLng"/>
 
             <TextView
@@ -57,7 +81,7 @@
                     android:layout_height="wrap_content"
                     android:text="经度"
                     android:textAlignment="textStart"
-                    app:layout_constraintTop_toBottomOf="@+id/serverconnectstate"
+                    app:layout_constraintTop_toBottomOf="@+id/returnalt"
                     app:layout_constraintBottom_toTopOf="@+id/textLng"
                     app:layout_constraintStart_toStartOf="@+id/textLng"/>
             <TextView
@@ -200,6 +224,17 @@
                     app:layout_constraintTop_toTopOf="parent"
                     android:id="@+id/button_list"
             >
+
+                <Button
+                    android:id="@+id/btn_eid"
+                    android:layout_width="90dp"
+                    android:layout_height="50dp"
+                    android:text="修改id"/>
+                <Button
+                    android:id="@+id/btn_ereturnalt"
+                    android:layout_width="90dp"
+                    android:layout_height="50dp"
+                    android:text="返航高度"/>
                 <Button
                         android:id="@+id/btn_record"
                         android:layout_width="90dp"
@@ -221,9 +256,9 @@
             </LinearLayout>
             <TextView
                     android:id="@+id/missioninfo"
-                    android:layout_width="350dp"
+                    android:layout_width="150dp"
                     android:layout_height="48dp"
-                    android:text="未执行飞行任务"
+                    android:text=""
                     android:textSize="12sp"
                     android:textAlignment="center"
                     app:layout_constraintTop_toTopOf="parent"
