@@ -697,15 +697,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                     e.printStackTrace();
                                 }
                             }).start();
-                        } else if (data.contains("takeoff")){
-                            new Thread(() -> {
-                                try {
-                                    missionmanage(0, 0);
-                                } catch (InterruptedException e) {
-                                    e.printStackTrace();
-                                }
-                            }).start();
-                        } else if (data.contains("execmission")){
+                        }
+//                        else if (data.contains("takeoff")){
+//                            new Thread(() -> {
+//                                try {
+//                                    missionmanage(0, 0);
+//                                } catch (InterruptedException e) {
+//                                    e.printStackTrace();
+//                                }
+//                            }).start();
+//                        }
+                        else if (data.contains("execmission")){
                             new Thread(() -> {
                                 try {
                                     missionmanage(3, 3);
@@ -941,10 +943,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         String[] missions = missionparams.split(";");
         String[] s = missions[num].split(",");
         boolean res = false;
-        if (num == 0){
-            res = uploadwaypointmission(0, new String[1]);
-        }
-        else {
+//        if (num == 0){
+//            res = uploadwaypointmission(0, new String[1]);
+//        }
+//        else {
             if (missions[num].contains("way")){
                 if (num == 4) res = uploadwaypointmission(3, s);      // 返航
                 else if (num == 1) res = uploadwaypointmission(2, s);
@@ -953,7 +955,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             else if (missions[num].contains("hot")){
                 res = true;
             }
-        }
+//        }
         if (res){
             sendMessage(clientid+",signalok");
         }
@@ -973,10 +975,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
             uavstate = UAVState.READY;
 
-            if (i == 0){
-                execwaypointmission();      // 起飞
-            }
-            else {
+//            if (i == 0){
+//                execwaypointmission();      // 起飞
+//            }
+//            else {
 
                 String[] s = missions[i].split(",");
                 if (missions[i].contains("way")) {
@@ -1028,7 +1030,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     uavstate = UAVState.NONE;
                 }
 
-            }
+//            }
 
 
             while (uavstate != UAVState.NONE) {
@@ -1041,10 +1043,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 sleep(200);
             }
 
-            if (i == 0){
-                sendMessage(clientid + ",alreadytakeoff");
-            }
-            else if (i == 2){
+//            if (i == 0){
+//                sendMessage(clientid + ",alreadytakeoff");
+//            }
+//            else
+            if (i == 2){
                 sendMessage(clientid + ",arrivestartpoint");
             } else if (i == 3) {
                 sendMessage(clientid + ",finishmission");
@@ -1087,7 +1090,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             float vel = Float.parseFloat(s[2]);
             int staytime;
             builder.autoFlightSpeed(vel);
-            waypointList.add(new Waypoint((droneLocationLat+Double.parseDouble(s[4]))/2, (droneLocationLng+Double.parseDouble(s[3]))/2, Float.parseFloat(s[5])/2));
+            waypointList.add(new Waypoint(droneLocationLat, droneLocationLng, 6));
+            waypointList.add(new Waypoint((droneLocationLat+Double.parseDouble(s[4]))/2, (droneLocationLng+Double.parseDouble(s[3]))/2, Float.parseFloat(s[5])/2+3));
             Waypoint eachWaypoint;
             for (int i=0; i<len; i++){
                 eachWaypoint = new Waypoint(Double.parseDouble(s[i*4+4]), Double.parseDouble(s[i*4+3]), Float.parseFloat(s[i*4+5]));
@@ -1103,7 +1107,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             float vel = Float.parseFloat(s[2]);
             int staytime;
             builder.autoFlightSpeed(vel);
-            waypointList.add(new Waypoint(droneLocationLat, droneLocationLng, ralt));
+            waypointList.add(new Waypoint(droneLocationLat, droneLocationLng, (float)droneLocationAlt));
+            waypointList.add(new Waypoint((droneLocationLat+Double.parseDouble(s[4]))/2, (droneLocationLng+Double.parseDouble(s[3]))/2, ((float)droneLocationAlt+ralt)/2));
             Waypoint eachWaypoint;
             for (int i=0; i<len; i++){
                 eachWaypoint = new Waypoint(Double.parseDouble(s[i*4+4]), Double.parseDouble(s[i*4+3]), ralt);
