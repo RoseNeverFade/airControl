@@ -543,7 +543,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             int cnt = 0;
             try{
                 client.send(msg + "-" + index);
-                while(sendmsgmap[(int)index] != 2 && cnt < 10){
+                System.out.println("s:" + msg + "-" + index);
+                while(sendmsgmap[(int)index] != 2 && cnt < 20){
                     try {
                         sleep(500);
                     } catch (InterruptedException e) {
@@ -551,12 +552,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     }
                     cnt += 1;
                     client.send(msg + "-" + index);
+                    System.out.println("s:" + msg + "-" + index);
                 }
             } catch (Exception e){
                 showToast("服务器未连接");
+                serverconnectstate.setText("服务器：未连接");
             }
-            if (cnt >= 10){
+            if (cnt >= 20){
                 showToast("服务器连接断开");
+                serverconnectstate.setText("服务器：未连接");
             }
 
         }).start();
@@ -672,7 +676,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             public void onMessage(String data) {
 
                 runOnUiThread(() -> {
-                    System.out.println("*****************************:" + data);
+                    System.out.println("r:" + data);
                     String [] datasplit = data.split("-");
 
                     if (revmsgmap[Integer.parseInt(datasplit[1])] == 0){
@@ -759,7 +763,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         }
 
                         if (!data.contains("gotmessage") && !data.contains("startlanding")){
-                            for (int i=0; i<3; i++){
+                            for (int i=0; i<10; i++){
                                 client.send(clientid + ",gotmessage-" + datasplit[1]);
                                 try {
                                     sleep(300);
@@ -956,6 +960,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 res = true;
             }
 //        }
+
+        uavstate = UAVState.NONE;
+
         if (res){
             sendMessage(clientid+",signalok");
         }
