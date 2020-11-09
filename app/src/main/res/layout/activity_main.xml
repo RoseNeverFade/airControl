@@ -32,39 +32,17 @@
                     android:layout_width="130dp"
                     android:layout_height="wrap_content"
                     android:text=""
-                    app:layout_constraintTop_toTopOf="parent" app:layout_constraintBottom_toTopOf="@+id/uavconnectstate"
+                    app:layout_constraintTop_toTopOf="parent" app:layout_constraintBottom_toTopOf="@+id/textreturnalt"
                     app:layout_constraintStart_toStartOf="@+id/textLng"/>
 
-            <TextView
-                android:id="@+id/uavconnectstate"
-                android:layout_width="130dp"
-                android:layout_height="wrap_content"
-                android:text="无人机：未连接"
-                app:layout_constraintTop_toBottomOf="@+id/textcid" app:layout_constraintBottom_toTopOf="@+id/serverconnectstate"
-                app:layout_constraintStart_toStartOf="@+id/textLng"/>
 
-            <TextView
-                android:id="@+id/serverconnectstate"
-                android:layout_width="130dp"
-                android:layout_height="wrap_content"
-                android:text="服务器：未连接"
-                app:layout_constraintTop_toBottomOf="@+id/uavconnectstate" app:layout_constraintBottom_toTopOf="@+id/textuavstate"
-                app:layout_constraintStart_toStartOf="@+id/textuavstate"/>
-
-            <TextView
-                android:id="@+id/textuavstate"
-                android:layout_width="130dp"
-                android:layout_height="wrap_content"
-                android:text="State："
-                app:layout_constraintTop_toBottomOf="@+id/serverconnectstate" app:layout_constraintBottom_toTopOf="@+id/textreturnalt"
-                app:layout_constraintStart_toStartOf="@+id/returnalt"/>
 
             <TextView
                 android:id="@+id/textreturnalt"
                 android:layout_width="130dp"
                 android:layout_height="wrap_content"
                 android:text="返航高度"
-                app:layout_constraintTop_toBottomOf="@+id/textuavstate" app:layout_constraintBottom_toTopOf="@+id/returnalt"
+                app:layout_constraintTop_toBottomOf="@+id/textcid" app:layout_constraintBottom_toTopOf="@+id/returnalt"
                 app:layout_constraintStart_toStartOf="@+id/textLng"/>
 
             <TextView
@@ -363,18 +341,87 @@
     >
 
 
-
-        <Button
-                android:id="@+id/btn_cserver"
-                android:layout_width="90dp"
-                android:layout_height="50dp"
-                android:onClick="onClick"
+        <TextView
+                android:id="@+id/uavconnectstate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_alignParentRight="true"
                 android:layout_marginEnd="10dp"
-                android:text="连服务器" app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toTopOf="@+id/btn_waypoint"
-                app:layout_constraintEnd_toEndOf="parent"
-        />
+                android:textAlignment="textStart"
+                android:text="无人机：未连接" app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toTopOf="@+id/serverconnectstate"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+        <TextView
+            android:id="@+id/serverconnectstate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:textAlignment="textStart"
+            android:text="服务器：未连接" app:layout_constraintTop_toBottomOf="@+id/uavconnectstate"
+            app:layout_constraintBottom_toTopOf="@+id/textuavstate"
+            app:layout_constraintEnd_toEndOf="@+id/uavconnectstate"/>
+
+        <TextView
+            android:id="@+id/textuavstate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:textAlignment="textStart"
+            android:text="[State]" app:layout_constraintTop_toBottomOf="@+id/serverconnectstate"
+            app:layout_constraintBottom_toTopOf="@+id/textTBattery"
+            app:layout_constraintEnd_toEndOf="@+id/serverconnectstate"/>
+
+        <TextView
+            android:id="@+id/textTBattery"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:textAlignment="textStart"
+            android:text="无人机电量" app:layout_constraintTop_toBottomOf="@+id/textuavstate"
+            app:layout_constraintBottom_toTopOf="@+id/textBattery"
+            app:layout_constraintEnd_toEndOf="@+id/textuavstate"/>
+
+        <TextView
+            android:id="@+id/textBattery"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:textAlignment="textStart"
+            android:text="[无人机电量]" app:layout_constraintTop_toBottomOf="@+id/textTBattery"
+            app:layout_constraintBottom_toTopOf="@+id/textTRtks"
+            app:layout_constraintEnd_toEndOf="@+id/textTBattery"/>
+
+        <TextView
+            android:id="@+id/textTRtks"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:textAlignment="textStart"
+            android:text="RTK信号" app:layout_constraintTop_toBottomOf="@+id/textBattery"
+            app:layout_constraintBottom_toTopOf="@+id/textRtks"
+            app:layout_constraintEnd_toEndOf="@+id/textBattery"/>
+
+        <TextView
+            android:id="@+id/textRtks"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:textAlignment="textStart"
+            android:text="无信号" app:layout_constraintTop_toBottomOf="@+id/textTRtks"
+            app:layout_constraintBottom_toTopOf="@+id/btn_cserver"
+            app:layout_constraintEnd_toEndOf="@+id/textTRtks"/>
+
+
+        <Button
+            android:id="@+id/btn_cserver"
+            android:layout_width="90dp"
+            android:layout_height="50dp"
+            android:onClick="onClick"
+            android:layout_alignParentRight="true"
+            android:text="连服务器" app:layout_constraintTop_toBottomOf="@+id/textRtks"
+            app:layout_constraintBottom_toTopOf="@+id/btn_waypoint"
+            app:layout_constraintEnd_toEndOf="@+id/textRtks"/>
 
         <Button
                 android:id="@+id/btn_waypoint"
@@ -404,7 +451,8 @@
                 android:layout_alignParentRight="true"
                 android:text="机头转向" app:layout_constraintTop_toBottomOf="@+id/btn_hotpoint"
                 app:layout_constraintBottom_toTopOf="@+id/btn_autorotate"
-                app:layout_constraintEnd_toEndOf="@+id/btn_hotpoint"/>
+                app:layout_constraintEnd_toEndOf="@+id/btn_hotpoint"
+                android:visibility="gone"/>
 
         <Button
                 android:id="@+id/btn_autorotate"
@@ -413,7 +461,8 @@
                 android:onClick="onClick"
                 android:layout_alignParentRight="true"
                 android:text="悬停旋转" app:layout_constraintTop_toBottomOf="@+id/btn_rotate"
-                app:layout_constraintBottom_toBottomOf="parent" app:layout_constraintEnd_toEndOf="@+id/btn_rotate"/>
+                app:layout_constraintBottom_toBottomOf="parent" app:layout_constraintEnd_toEndOf="@+id/btn_rotate"
+                android:visibility="gone"/>
     </androidx.constraintlayout.widget.ConstraintLayout>
     <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="0dp"

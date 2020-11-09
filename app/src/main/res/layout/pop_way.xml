@@ -24,6 +24,7 @@
 
 
     <TextView
+        android:id="@+id/altitude"
         android:layout_width="100dp"
         android:layout_height="50dp"
         android:text="高度"
@@ -41,10 +42,18 @@
         />
 
 
-    <Button android:id="@+id/bt_wgo"
+    <Button
+        android:id="@+id/sendmsg"
         android:layout_width="220dp"
         android:layout_height="50dp"
         android:layout_marginTop="260dp"
+        android:layout_marginLeft="20dp"
+        android:text="发送指令" />
+
+    <Button android:id="@+id/bt_wgo"
+        android:layout_width="220dp"
+        android:layout_height="50dp"
+        android:layout_marginTop="320dp"
         android:layout_marginLeft="20dp"
         android:text="执行任务"/>
 
@@ -87,6 +96,7 @@
         android:layout_marginLeft="140dp"
         android:inputType="text"
         android:text="" />
+
 
 
 </RelativeLayout>
