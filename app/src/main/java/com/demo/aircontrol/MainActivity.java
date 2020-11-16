@@ -547,9 +547,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             try{
                 client.send(msg + "-" + index);
                 System.out.println("s:" + msg + "-" + index);
-                while(sendmsgmap[(int)index] != 2 && cnt < 20){
+                while(sendmsgmap[(int)index] != 2 && cnt < 50){
                     try {
-                        sleep(500);
+                        sleep(100);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -559,11 +559,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 }
             } catch (Exception e){
                 showToast("服务器未连接");
-                serverconnectstate.setText("服务器：未连接");
+                runOnUiThread(()->{
+                    serverconnectstate.setText("服务器：未连接");
+                });
             }
-            if (cnt >= 20){
+            if (cnt >= 50){
                 showToast("服务器连接断开");
-                serverconnectstate.setText("服务器：未连接");
+                runOnUiThread(()->{
+                    serverconnectstate.setText("服务器：未连接");
+                });
             }
 
         }).start();
@@ -751,14 +755,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         }
 
                         if (!data.contains("gotmessage") && !data.contains("startlanding")){
-                            for (int i=0; i<10; i++){
-                                client.send(clientid + ",gotmessage-" + datasplit[1]);
-                                try {
-                                    sleep(300);
-                                } catch (InterruptedException e) {
-                                    e.printStackTrace();
+
+                            new Thread(() -> {
+                                for (int i=0; i<30; i++){
+                                    client.send(clientid + ",gotmessage-" + datasplit[1]);
+                                    try {
+                                        sleep(100);
+                                    } catch (InterruptedException e) {
+                                        e.printStackTrace();
+                                    }
                                 }
-                            }
+                            }).start();
                         }
 
                     }
@@ -1171,9 +1178,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 uavstate = UAVState.ERROR;
             }
             try{
-                sleep(500);
-                ucnt += 1;
-                if (uavstate == UAVState.ERROR) return false ;
+                if (uavstate == UAVState.ERROR) {
+                    showToast("load mission error");
+                    sleep(500);
+                    return false ;
+                } else {
+                    sleep(500);
+                    ucnt += 1;
+                }
             }catch(Exception e){
                 e.printStackTrace();
             }
@@ -1195,9 +1207,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 uavstate = UAVState.ERROR;
             }
             try{
-                sleep(500);
-                ecnt += 1;
-                if (uavstate == UAVState.ERROR) return false;
+                if (uavstate == UAVState.ERROR) {
+                    showToast("upload mission error");
+                    sleep(500);
+                    return false;
+                }else {
+                    sleep(500);
+                    ecnt += 1;
+                }
             }catch(Exception e){
                 e.printStackTrace();
             }
@@ -1236,6 +1253,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+
         hotpointMissionOperator.startMission(hotpointMission, new CommonCallbacks.CompletionCallback() {
             @Override
             public void onResult(DJIError djiError) {
@@ -1594,6 +1612,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //                                    cbss.setChecked(false);
 
                                 }
+                                uavstate = UAVState.NONE;
                             }).start();
                         }
 
