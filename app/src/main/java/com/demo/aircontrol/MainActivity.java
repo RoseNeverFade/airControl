@@ -88,29 +88,30 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             Manifest.permission.READ_PHONE_STATE,
     };
     private static final int REQUEST_PERMISSION_CODE = 12345;
-    private static UAVState uavstate;
+    private static UAVState uavstate;       // 无人机状态，对应界面中右上角的State
     private static BaseProduct mProduct;
     private Handler mHandler;
     private FlightController mFlightController = null;
-    private WaypointMissionOperatorListener waypointListener;
-    private HotpointMissionOperatorListener hotpointlistener;
-    private WaypointMissionOperator waypointMissionOperator = null;
-    private HotpointMissionOperator hotpointMissionOperator = null;
+    private WaypointMissionOperatorListener waypointListener;           // 航点飞行任务监听器
+    private HotpointMissionOperatorListener hotpointlistener;           // 圆形绕飞任务监听器
+    private WaypointMissionOperator waypointMissionOperator = null;     // 航点飞行任务控制器
+    private HotpointMissionOperator hotpointMissionOperator = null;     // 圆形绕飞任务控制器
     //飞控数据
-    private double droneLocationLat = 181, droneLocationLng = 181;
-    private double droneRtkLat = 0, droneRtkLng = 0;
-    private float droneRtkAlt = 0;
-    private double droneLocationAlt = 0;
-    private double droneAttitudeYaw = 0;
-    private double droneAttitudePitch = 0;
-    private double droneAttitudeRoll = 0;
-    private double droneVelocity = 0;
-    private boolean droneRtk = false;
-    private boolean uavconnected = false;
-    private boolean stopall = false;
-    private Object stopallLock = new Object();
-    private String droneFlightMode = "";
-    private String droneTime;
+    private double droneLocationLat = 181, droneLocationLng = 181;      // 经纬度
+    private double droneRtkLat = 0, droneRtkLng = 0;                    // Rtk经纬度
+    private float droneRtkAlt = 0;                  // Rtk高度
+    private double droneLocationAlt = 0;            // 高度
+    private double droneAttitudeYaw = 0;            // 偏航角
+    private double droneAttitudePitch = 0;          // 俯仰角
+    private double droneAttitudeRoll = 0;           // 横滚角
+    private double droneVelocity = 0;               // 速度
+    private boolean droneRtk = false;               // Rtk使用状态
+    private boolean uavconnected = false;           // 无人机连接状态
+    private boolean stopall = false;                // 中止任务状态
+    private Object stopallLock = new Object();      // 中止任务状态的锁
+    private String droneFlightMode = "";            // 飞行模式
+    private String droneTime;                       // 时间
+    // 安卓端保存数据使用的列表
     private ArrayList<String> timelist;
     private ArrayList<String> lnglist;
     private ArrayList<String> latlist;
@@ -118,37 +119,38 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private ArrayList<String> rolllist;
     private ArrayList<String> pitchlist;
     private ArrayList<String> yawlist;
-    private PopupWindow popupWindowWay;
-    private PopupWindow popupWindowHot;
-    private PopupWindow popupWindowCon;
-    private PopupWindow popupWindowCserver;
-    private PopupWindow popupWindowClientid;
-    private PopupWindow popupWindowReturnAlt;
-    private PopupWindow popupWindowRotate;
-    private PopupWindow popupWindowAutorotate;
-    private String clientid = "0";
-    private String missionparams;
-    private HandlerThread serverHandlerThread;
-    private Handler serverHandler;
-    private SocketClient client;
-    private int stopmission;
-    private double waylng;
-    private double waylat;
-    private float wayalt;
-    private float ralt;
-    private float wayvel;
-    private double hotlng;
-    private double hotlat;
-    private double hotalt;
-    private float hotw;
-    private double hotr;
-    private String hotstart;
-    private String hotcircles;
-    private float autorotatew;
-    private String arstart;
-    private String arcircles;
-    private String serveruri;
-    //显示信息
+
+    // 弹窗
+    private PopupWindow popupWindowWay;         // “航点飞行”按钮弹窗
+    private PopupWindow popupWindowHot;         // “圆形绕飞”按钮弹窗
+    private PopupWindow popupWindowCon;         // 确认弹窗
+    private PopupWindow popupWindowCserver;     // “连接服务器”按钮
+    private PopupWindow popupWindowClientid;    // 设置无人机ID弹窗
+    private PopupWindow popupWindowReturnAlt;   // 设置返航高度弹窗
+    private PopupWindow popupWindowRotate;      // 机头转向弹窗
+    private PopupWindow popupWindowAutorotate;  // 原地悬停旋转弹窗
+
+    // 安卓端输入的参数
+    private float ralt;             //返航高度
+    // 航点飞行
+    private double waylng;          // 经度
+    private double waylat;          // 纬度
+    private float wayalt;           // 高度
+    private float wayvel;           // 速度
+    // 圆形绕飞
+    private double hotlng;          // 圆心经度
+    private double hotlat;          // 圆心纬度
+    private double hotalt;          // 圆心高度
+    private float hotw;             // 绕飞角速度
+    private double hotr;            // 绕飞半径
+    private String hotstart;        // 起点位置
+    private String hotcircles;      // 绕飞圈数
+    // 原地悬停旋转
+    private float autorotatew;      // 旋转角速度
+    private String arstart;         // 旋转起始机头方向
+    private String arcircles;       // 旋转圈数
+
+    // 显示信息的控件
     private TextView tLng;
     private TextView tLat;
     private TextView tAlt;
@@ -171,11 +173,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Button btnDemOutput;//输出经纬数据至文件
     private TextView missioninfo;
 
-    private int wexeccnt;
-    private int hexeccnt;
+    private String clientid = "0";              // 无人机id
+    private String missionparams;               // 服务器发来的任务参数
+    private HandlerThread serverHandlerThread;
+    private Handler serverHandler;
+    private String serveruri;                   // 服务器uri
+    private SocketClient client;
+    private int stopmission;                    // 用于停止机头转向任务和原地悬停旋转任务
+    private int wexeccnt;                       // 用于判断航点飞行任务的执行状态
+    private int hexeccnt;                       // 用于判断圆形绕飞任务的执行状态
 
-    private int sendmsgmap[];
-    private int revmsgmap[];
+    private int sendmsgmap[];                   // 发送消息的tag数组
+    private int revmsgmap[];                    // 接收消息的tag数组
 
 
 
@@ -269,6 +278,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //        }).start();
     }
 
+    /***
+     * 初始化UI界面
+     */
     private void initUI() {
 
         //显示信息
@@ -535,6 +547,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    /***
+     * 向服务器发送消息
+     * @param msg 具体消息内容
+     */
     private void sendMessage(String msg){
         new Thread(() -> {
             long index = System.currentTimeMillis() % 100000;
@@ -547,7 +563,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             try{
                 client.send(msg + "-" + index);
                 System.out.println("s:" + msg + "-" + index);
-                while(sendmsgmap[(int)index] != 2 && cnt < 50){
+                while(sendmsgmap[(int)index] != 2 && cnt < 100){
                     try {
                         sleep(100);
                     } catch (InterruptedException e) {
@@ -563,7 +579,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     serverconnectstate.setText("服务器：未连接");
                 });
             }
-            if (cnt >= 50){
+            if (cnt >= 100){
                 showToast("服务器连接断开");
                 runOnUiThread(()->{
                     serverconnectstate.setText("服务器：未连接");
@@ -573,8 +589,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }).start();
     }
 
-
-
+    /***
+     * 安卓端保存数据文件
+     */
     private void outputGPStoFile() {
         Calendar now = Calendar.getInstance();
 
@@ -673,7 +690,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-
+    /***
+     * 连接服务器端
+     * @param struri 服务器的uri
+     */
     public void connectServer(String struri) {
         serverHandlerThread = new HandlerThread("MainActivity", android.os.Process.THREAD_PRIORITY_BACKGROUND);
         serverHandlerThread.start();
@@ -784,6 +804,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         serverHandler.post(new ConnectRunnable());
     }
 
+    /***
+     * 初始化设置返航高度的弹窗
+     */
     protected void initPopupWindowReturnAlt() {
         View v = getLayoutInflater().inflate(R.layout.pop_returnalt, null, false);
         popupWindowReturnAlt = new PopupWindow(v, 1000, 500, true);
@@ -833,6 +856,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
     }
 
+    /***
+     * 初始化设置无人机id的弹窗
+     */
     protected void initPopupWindowClientid() {
         View v = getLayoutInflater().inflate(R.layout.pop_clientid, null, false);
         popupWindowClientid = new PopupWindow(v, 1000, 500, true);
@@ -882,6 +908,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
     }
 
+    /***
+     * 初始化连接服务器的弹窗
+     */
     protected void initPopupWindowCserver() {
         View v = getLayoutInflater().inflate(R.layout.pop_connectserver, null, false);
         popupWindowCserver = new PopupWindow(v, 1000, 500, true);
@@ -938,6 +967,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
     }
 
+    /***
+     * 服务器端的“收到指令”测试，如果是航点飞行任务向无人机上传任务参数
+     * @param num 任务类型
+     */
     protected  void signaltest(int num){
         String[] missions = missionparams.split(";");
         String[] s = missions[num].split(",");
@@ -947,9 +980,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //        }
 //        else {
             if (missions[num].contains("way")){
-                if (num == 4) res = uploadwaypointmission(3, s);      // 返航
-                else if (num == 1) res = uploadwaypointmission(2, s);
-                else if (num == 3) res = uploadwaypointmission(4, s);
+                if (num == 4) res = uploadwaypointmission(3, s);        // 返航
+                else if (num == 1) res = uploadwaypointmission(2, s);   // 飞向起点
+                else if (num == 3) res = uploadwaypointmission(4, s);   // 执行任务
             }
             else if (missions[num].contains("hot")){
                 res = true;
@@ -966,6 +999,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    /***
+     * 执行飞行任务（飞向起点、编队飞行、返航）
+     * @param start 开始阶段
+     * @param end 结束阶段
+     * @throws InterruptedException
+     */
     protected synchronized void missionmanage(int start, int end) throws InterruptedException {
         String[] missions = missionparams.split(";");
 
@@ -1066,6 +1105,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    /***
+     * 中止任务
+     */
     private void stopallmission(){
         synchronized (stopallLock){
             stopall = true;
@@ -1089,6 +1131,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    /***
+     * pad向无人机上传航点飞行任务的参数
+     * @param type 任务阶段（飞向起点/线性编队/返航）
+     * @param s 任务参数
+     * @return 上传成功则返回true，上传失败返回false
+     */
     protected boolean uploadwaypointmission(int type, String[] s){
         WaypointMission waypointMission = null;
         WaypointMission.Builder builder = new WaypointMission.Builder();
@@ -1222,6 +1270,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         return true;
     }
 
+    /***
+     * 执行航点飞行任务
+     */
     protected void execwaypointmission() {
         waypointMissionOperator.startMission(new CommonCallbacks.CompletionCallback() {
             @Override
@@ -1232,6 +1283,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
     }
 
+    /***
+     * 执行圆形绕飞任务
+     */
     protected void exechotpointmission() {
         // 圆形绕飞
         HotpointMission hotpointMission = new HotpointMission();
@@ -1262,73 +1316,76 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         });
 
-        ArrayList<Double> stoppoint = new ArrayList<>();
-        if (hotcircles.equals("1")){
-            if (hotstart.equals("东")) stoppoint.add(-90.0);
-            else if (hotstart.equals("南")) stoppoint.add(0.0);
-            else if (hotstart.equals("西")) stoppoint.add(90.0);
-            else if (hotstart.equals("北")) {
-                stoppoint.add(180.0);
-                stoppoint.add(-180.0);
-            }
-        } else if (hotcircles.equals("1/2")) {
-            if (hotstart.equals("东")) stoppoint.add(90.0);
-            else if (hotstart.equals("南")) {
-                stoppoint.add(180.0);
-                stoppoint.add(-180.0);
-            } else if (hotstart.equals("西")) stoppoint.add(-90.0);
-            else if (hotstart.equals("北")) stoppoint.add(0.0);
-        } else if (hotcircles.equals("1/4")){
-            if (hotstart.equals("东")) {
-                stoppoint.add(180.0);
-                stoppoint.add(-180.0);
-                stoppoint.add(0.0);
-            }
-            else if (hotstart.equals("南")) {
-                stoppoint.add(90.0);
-                stoppoint.add(-90.0);
-            } else if (hotstart.equals("西")) {
-                stoppoint.add(180.0);
-                stoppoint.add(-180.0);
-                stoppoint.add(0.0);
-            }
-            else if (hotstart.equals("北")) {
-                stoppoint.add(90.0);
-                stoppoint.add(-90.0);
-            }
-        }
-
-
-        try {
-            sleep(10000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-
-        int len = stoppoint.size();
-        while (true){
-            if (uavstate == UAVState.ERROR || uavstate == UAVState.NONE) return;
-
-            try {
-                sleep(50);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            for (int i=0; i<len; i++){
-                if (Math.abs(stoppoint.get(i)-droneAttitudeYaw) < 3){
-                    hotpointMissionOperator.stop(new CommonCallbacks.CompletionCallback() {
-                        @Override
-                        public void onResult(DJIError djiError) {
-                            showResultToast(djiError);
-                        }
-                    });
-                    return ;
-                }
-            }
-        }
+//        ArrayList<Double> stoppoint = new ArrayList<>();
+//        if (hotcircles.equals("1")){
+//            if (hotstart.equals("东")) stoppoint.add(-90.0);
+//            else if (hotstart.equals("南")) stoppoint.add(0.0);
+//            else if (hotstart.equals("西")) stoppoint.add(90.0);
+//            else if (hotstart.equals("北")) {
+//                stoppoint.add(180.0);
+//                stoppoint.add(-180.0);
+//            }
+//        } else if (hotcircles.equals("1/2")) {
+//            if (hotstart.equals("东")) stoppoint.add(90.0);
+//            else if (hotstart.equals("南")) {
+//                stoppoint.add(180.0);
+//                stoppoint.add(-180.0);
+//            } else if (hotstart.equals("西")) stoppoint.add(-90.0);
+//            else if (hotstart.equals("北")) stoppoint.add(0.0);
+//        } else if (hotcircles.equals("1/4")){
+//            if (hotstart.equals("东")) {
+//                stoppoint.add(180.0);
+//                stoppoint.add(-180.0);
+//                stoppoint.add(0.0);
+//            }
+//            else if (hotstart.equals("南")) {
+//                stoppoint.add(90.0);
+//                stoppoint.add(-90.0);
+//            } else if (hotstart.equals("西")) {
+//                stoppoint.add(180.0);
+//                stoppoint.add(-180.0);
+//                stoppoint.add(0.0);
+//            }
+//            else if (hotstart.equals("北")) {
+//                stoppoint.add(90.0);
+//                stoppoint.add(-90.0);
+//            }
+//        }
+//
+//
+//        try {
+//            sleep(20000);
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
+//
+//
+//        int len = stoppoint.size();
+//        while (true){
+//            if (uavstate == UAVState.ERROR || uavstate == UAVState.NONE) return;
+//
+//            try {
+//                sleep(50);
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
+//            for (int i=0; i<len; i++){
+//                if (Math.abs(stoppoint.get(i)-droneAttitudeYaw) < 3){
+//                    hotpointMissionOperator.stop(new CommonCallbacks.CompletionCallback() {
+//                        @Override
+//                        public void onResult(DJIError djiError) {
+//                            showResultToast(djiError);
+//                        }
+//                    });
+//                    return ;
+//                }
+//            }
+//        }
     }
 
+    /***
+     * 执行原地悬停旋转任务
+     */
     protected void execarmission() {
 
         if (mFlightController != null) {
@@ -1460,6 +1517,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    /***
+     * 执行机头转向任务
+     * @param type 目标机头方向
+     */
     protected void execrotatemission(int type){
         final float rotatedir = (type - 40) * 90 - 180;
 
@@ -1543,6 +1604,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    /***
+     * 初始化确认窗口
+     * @param type 确认窗口中的内容及确认后执行的操作
+     */
     protected void initPopupWindowConfirm(final int type) {
         View v = getLayoutInflater().inflate(R.layout.pop_confirm, null, false);
         popupWindowCon = new PopupWindow(v, 1000, 500, true);
@@ -1692,6 +1757,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
     }
 
+    /***
+     * 初始化设置航点飞行任务参数的窗口
+     */
     protected void initPopupWindowWay() {
         View popupWindow_view = getLayoutInflater().inflate(R.layout.pop_way, null,
                 false);
@@ -1772,6 +1840,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
     }
 
+    /***
+     * 初始化设置圆形绕飞任务参数的窗口
+     */
     protected void initPopupWindowHot() {
         View popupWindow_view = getLayoutInflater().inflate(R.layout.pop_hot, null,
                 false);
@@ -1846,6 +1917,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     }
 
+    /***
+     * 初始化设置机头转向任务参数的窗口
+     */
     protected void initPopupWindowRotate() {
         /* TODO Auto-generated method stub */
 
@@ -1915,6 +1989,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     }
 
+    /***
+     * 初始化设置原地悬停旋转任务参数的窗口
+     */
     protected void initPopupWindowAutorotate() {
         /* TODO Auto-generated method stub */
 
@@ -2248,6 +2325,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mHandler.postDelayed(updateRunnable, 500);
     }
 
+    /***
+     * 界面弹出提示信息
+     * @param toastMsg 提示信息的内容
+     */
     private void showToast(final String toastMsg) {
 
         Handler handler = new Handler(Looper.getMainLooper());
@@ -2260,10 +2341,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     }
 
+    /***
+     * 如果产生djierror，进行弹窗提示
+     * @param djiError error内容
+     */
     private void showResultToast(DJIError djiError) {
         if (djiError != null) showToast(djiError.getDescription());
     }
 
+    /**
+     * 当产生djiError时，将uavstate置为ERROR
+     * @param djiError
+     */
     private void toError(DJIError djiError){
         System.out.println(djiError != null);
         if (djiError != null) uavstate = UAVState.ERROR;
