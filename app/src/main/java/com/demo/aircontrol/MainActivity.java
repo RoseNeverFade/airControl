@@ -175,6 +175,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private String clientid = "0";              // 无人机id
     private String missionparams;               // 服务器发来的任务参数
+    private MissionParams mmissionparams;
     private HandlerThread serverHandlerThread;
     private Handler serverHandler;
     private String serveruri;                   // 服务器uri
@@ -552,6 +553,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      * @param msg 具体消息内容
      */
     private void sendMessage(String msg){
+        if (msg.contains("arrivestartpoint")){
+            showToast("arrivestartpoint");
+        }
         new Thread(() -> {
             long index = System.currentTimeMillis() % 100000;
             while (sendmsgmap[(int)index] != 0){
@@ -711,21 +715,24 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     if (revmsgmap[Integer.parseInt(datasplit[1])] == 0){
                         revmsgmap[Integer.parseInt(datasplit[1])] = 1;
 
-                        if (data.contains("connectsuccess")) {
+                        // -- 改成switch
+                        if (data.contains("connectsuccess")) {      // -- connectstatus = 1/0
                             showToast("连接成功");
                             serverconnectstate.setText("服务器：已连接");
                         } else if (data.contains("connecterror")) {
                             showToast("连接失败");
-                        } else if (data.contains("missionparams")){
+                        } else if (data.contains("missionparams")){     // -- 把三段的参数都在这里取出来
+                            // -- 检查格式和值是否存在
                             missionparams = datasplit[0];
+                            mmissionparams = new MissionParams(missionparams);
                             showToast("gotmission");
                             sendMessage(clientid + ",gotmission");
-                        } else if (data.contains("gotmessage")){
+                        } else if (data.contains("gotmessage")){        // -- serverResponse = 1/0
                             sendmsgmap[Integer.parseInt(datasplit[1])] = 2;
                         } else if (data.contains("gotostartpoint")){
                             new Thread(() -> {
                                 try {
-                                    missionmanage(1, 2);
+                                    missionmanage(1);
                                 } catch (InterruptedException e) {
                                     e.printStackTrace();
                                 }
@@ -741,9 +748,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //                            }).start();
 //                        }
                         else if (data.contains("execmission")){
+
                             new Thread(() -> {
                                 try {
-                                    missionmanage(3, 3);
+                                    missionmanage(3);
                                 } catch (InterruptedException e) {
                                     e.printStackTrace();
                                 }
@@ -760,19 +768,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 signaltest(Integer.parseInt(datasplit[0].split(",")[1]));
                             }).start();
                         } else if (data.contains("stopall")){
-                            stopallmission();
+                            stopallmission();       // -- 在stopall时要切断所有线程
                         } else if (data.contains("toreturn")){
-                            new Thread(() -> {
+                            new Thread(() -> {      // -- 给线程实例化一个名字，手动结束，在不同阶段，把前一阶段的线程关掉，是否可以检查其他线程
                                 try {
                                     while (uavstate != UAVState.NONE) {
                                         sleep(2000);
                                     }
-                                    missionmanage(4, 4);
+                                    missionmanage(4);
                                 } catch (InterruptedException e) {
                                     e.printStackTrace();
                                 }
                             }).start();
                         }
+
 
                         if (!data.contains("gotmessage") && !data.contains("startlanding")){
 
@@ -972,21 +981,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      * @param num 任务类型
      */
     protected  void signaltest(int num){
-        String[] missions = missionparams.split(";");
-        String[] s = missions[num].split(",");
+//        String[] missions = missionparams.split(";");       // -- 在missionparams刚来的时候对它进行处理
+//        String[] s = missions[num].split(",");
         boolean res = false;
 //        if (num == 0){
 //            res = uploadwaypointmission(0, new String[1]);
 //        }
 //        else {
-            if (missions[num].contains("way")){
-                if (num == 4) res = uploadwaypointmission(3, s);        // 返航
-                else if (num == 1) res = uploadwaypointmission(2, s);   // 飞向起点
-                else if (num == 3) res = uploadwaypointmission(4, s);   // 执行任务
-            }
-            else if (missions[num].contains("hot")){
-                res = true;
-            }
+        // -- 判断num的值是否符合要求
+
+        if (mmissionparams.missiontype == 2 && num == 3){
+            res = true;
+        }
+        else {
+            if (num == 4) res = uploadwaypointmission(3, mmissionparams.mgohome);        // 返航
+            else if (num == 1) res = uploadwaypointmission(2, mmissionparams.mgotostartpoint);   // 飞向起点
+            else if (num == 3) res = uploadwaypointmission(4, mmissionparams.mwaypointmission);   // 执行任务
+        }
 //        }
 
         uavstate = UAVState.NONE;
@@ -1001,14 +1012,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     /***
      * 执行飞行任务（飞向起点、编队飞行、返航）
-     * @param start 开始阶段
-     * @param end 结束阶段
+     * @param type 任务阶段
      * @throws InterruptedException
      */
-    protected synchronized void missionmanage(int start, int end) throws InterruptedException {
-        String[] missions = missionparams.split(";");
+    protected synchronized void missionmanage(int type) throws InterruptedException {
+//        String[] missions = missionparams.split(";");
 
-        for (int i=start; i<=end; i++){
+//        for (int i=start; i<=end; i++){
             while (uavstate != UAVState.NONE) {
                 if (uavstate == UAVState.ERROR) uavstate = UAVState.NONE;
 
@@ -1016,13 +1026,26 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
             uavstate = UAVState.READY;
 
+            if (type == 1 || type == 4 || type == 3 && mmissionparams.missiontype == 1){
+                execwaypointmission();
+            }
+            if (type == 3 && mmissionparams.missiontype == 2){
+                hotlng = mmissionparams.mhotpointmission.lng;
+                hotlat = mmissionparams.mhotpointmission.lat;
+                hotalt = mmissionparams.mhotpointmission.alt;
+                hotr = mmissionparams.mhotpointmission.hotr;
+                hotw = mmissionparams.mhotpointmission.hotw;
+                hotstart = mmissionparams.mhotpointmission.hotstart;
+                exechotpointmission();
+            }
+
 //            if (i == 0){
 //                execwaypointmission();      // 起飞
 //            }
 //            else {
 
-                String[] s = missions[i].split(",");
-                if (missions[i].contains("way")) {
+//                String[] s = missions[i].split(",");
+//                if (missions[i].contains("way")) {
 //                waylng = Double.parseDouble(s[1]);
 //                waylat = Double.parseDouble(s[2]);
 //                wayalt = Float.parseFloat(s[3]);
@@ -1030,17 +1053,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //                    if (i == 4) execwaypointmission(3, s);      // 返航
 //                    else if (i == 1) execwaypointmission(2, s);
 //                    else if (i == 3) execwaypointmission(4, s);
-                    execwaypointmission();
-                } else if (missions[i].contains("hot")) {
-                    hotlng = Double.parseDouble(s[1]);
-                    hotlat = Double.parseDouble(s[2]);
-                    hotalt = Float.parseFloat(s[3]);
-                    hotr = Double.parseDouble(s[4]);
-                    hotw = Float.parseFloat(s[5]);
-                    hotstart = s[6];
-                    hotcircles = s[7];
-                    exechotpointmission();
-                } else if (missions[i].contains("rotate")) {
+//                    execwaypointmission();
+//                } else if (missions[i].contains("hot")) {
+//                    exechotpointmission();
+//                }
+//                else if (missions[i].contains("rotate")) {
                     // 有机头转向
 //                int type = 0;
 //                if (s[1].contains("西")) type = 41;
@@ -1052,9 +1069,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
 
                     // 去掉机头转向
-                    uavstate = UAVState.NONE;
+//                    uavstate = UAVState.NONE;
 
-                } else if (missions[i].contains("ar")) {
+//                } else if (missions[i].contains("ar")) {
                     // 去掉悬停旋转
 //                    autorotatew = Float.parseFloat(s[1]);
 //                    arstart = s[2];
@@ -1068,8 +1085,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
 
                     // 去掉悬停旋转
-                    uavstate = UAVState.NONE;
-                }
+//                    uavstate = UAVState.NONE;
+//                }
 
 //            }
 
@@ -1088,11 +1105,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 //                sendMessage(clientid + ",alreadytakeoff");
 //            }
 //            else
-            if (i == 2){
+            if (type == 1){
                 sendMessage(clientid + ",arrivestartpoint");
-            } else if (i == 3) {
+            } else if (type == 3) {
                 sendMessage(clientid + ",finishmission");
-            } else if (i == 4) {
+            } else if (type == 4) {
                 sendMessage(clientid + ",returned");
             }
 
@@ -1102,7 +1119,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     return ;
                 }
             }
-        }
+//        }
     }
 
     /***
@@ -1134,10 +1151,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     /***
      * pad向无人机上传航点飞行任务的参数
      * @param type 任务阶段（飞向起点/线性编队/返航）
-     * @param s 任务参数
+     * @param mw 任务参数
      * @return 上传成功则返回true，上传失败返回false
      */
-    protected boolean uploadwaypointmission(int type, String[] s){
+    protected boolean uploadwaypointmission(int type, MWaypointMission mw){
         WaypointMission waypointMission = null;
         WaypointMission.Builder builder = new WaypointMission.Builder();
         builder.maxFlightSpeed(10f);
@@ -1159,15 +1176,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             waypointList.add(new Waypoint(waylat, waylng, wayalt));
         }
         else if (type == 2){    //  飞到起点
-            int len = Integer.parseInt(s[1]);
-            float vel = Float.parseFloat(s[2]);
+            int len = mw.size;
+            float vel = mw.vel;
             int staytime;
             builder.autoFlightSpeed(vel);
             waypointList.add(new Waypoint(droneLocationLat, droneLocationLng, 6));
             Waypoint eachWaypoint;
             for (int i=0; i<len; i++){
-                eachWaypoint = new Waypoint(Double.parseDouble(s[i*4+4]), Double.parseDouble(s[i*4+3]), Float.parseFloat(s[i*4+5]));
-                staytime = Integer.parseInt(s[i*4+6]);
+//                eachWaypoint = new Waypoint(Double.parseDouble(s[i*4+4]), Double.parseDouble(s[i*4+3]), Float.parseFloat(s[i*4+5]));
+                eachWaypoint = new Waypoint(mw.mwaypointlist.get(i).lat, mw.mwaypointlist.get(i).lng, mw.mwaypointlist.get(i).alt);
+                staytime = mw.mwaypointlist.get(i).staytime;
                 if (staytime > 0){
                     eachWaypoint.addAction(new WaypointAction(WaypointActionType.STAY, staytime));
                 }
@@ -1175,16 +1193,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         }
         else if (type == 3){    // 返航
-            int len = Integer.parseInt(s[1]);
-            float vel = Float.parseFloat(s[2]);
+            int len = mw.size;
+            float vel = mw.vel;
             int staytime;
             builder.autoFlightSpeed(vel);
             waypointList.add(new Waypoint(droneLocationLat, droneLocationLng, (float)droneLocationAlt));
-            waypointList.add(new Waypoint((droneLocationLat+Double.parseDouble(s[4]))/2, (droneLocationLng+Double.parseDouble(s[3]))/2, ((float)droneLocationAlt+ralt)/2));
+//            waypointList.add(new Waypoint((droneLocationLat+Double.parseDouble(s[4]))/2, (droneLocationLng+Double.parseDouble(s[3]))/2, ((float)droneLocationAlt+ralt)/2));
             Waypoint eachWaypoint;
             for (int i=0; i<len; i++){
-                eachWaypoint = new Waypoint(Double.parseDouble(s[i*4+4]), Double.parseDouble(s[i*4+3]), ralt);
-                staytime = Integer.parseInt(s[i*4+6]);
+                eachWaypoint = new Waypoint(mw.mwaypointlist.get(i).lat, mw.mwaypointlist.get(i).lng, ralt);
+                staytime = mw.mwaypointlist.get(i).staytime;
                 if (staytime > 0){
                     eachWaypoint.addAction(new WaypointAction(WaypointActionType.STAY, staytime));
                 }
@@ -1192,15 +1210,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         }
         else if (type == 4){    // 航点飞行
-            int len = Integer.parseInt(s[1]);
-            float vel = Float.parseFloat(s[2]);
+            int len = mw.size;
+            float vel = mw.vel;
             int staytime;
             builder.autoFlightSpeed(vel);
-            waypointList.add(new Waypoint(droneLocationLat, droneLocationLng, Float.parseFloat(s[5])));
+            waypointList.add(new Waypoint(droneLocationLat, droneLocationLng, mw.mwaypointlist.get(0).alt));
             Waypoint eachWaypoint;
             for (int i=0; i<len; i++){
-                eachWaypoint = new Waypoint(Double.parseDouble(s[i*4+4]), Double.parseDouble(s[i*4+3]), Float.parseFloat(s[i*4+5]));
-                staytime = Integer.parseInt(s[i*4+6]);
+                eachWaypoint = new Waypoint(mw.mwaypointlist.get(i).lat, mw.mwaypointlist.get(i).lng, mw.mwaypointlist.get(i).alt);
+                staytime = mw.mwaypointlist.get(i).staytime;
                 if (staytime > 0){
                     eachWaypoint.addAction(new WaypointAction(WaypointActionType.STAY, staytime));
                 }
@@ -1302,11 +1320,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         hotpointMission.setStartPoint(startPoint);
         HotpointHeading heading = HotpointHeading.TOWARDS_HOT_POINT;
         hotpointMission.setHeading(heading);
-        try {
-            sleep(5000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+//        try {
+//            sleep(5000);
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
 
         hotpointMissionOperator.startMission(hotpointMission, new CommonCallbacks.CompletionCallback() {
             @Override
@@ -1665,7 +1683,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         }
                         else if (type == 21){
                             new Thread(() -> {
-                                if (uploadwaypointmission(1, new String[1]))
+                                if (uploadwaypointmission(1, new MWaypointMission()))
                                 {
                                     showToast("发送指令成功");
 
