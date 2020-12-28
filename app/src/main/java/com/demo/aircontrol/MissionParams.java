@@ -12,15 +12,15 @@ public class MissionParams {
     MissionParams(String missionparams){
         String[] missions = missionparams.split(";");
         mgotostartpoint = new MWaypointMission(missions[1]);
-        if (missions[3].contains("way")) {
+        if (missions[2].contains("way")) {
             missiontype = 1;   // 航点飞行
-            mwaypointmission = new MWaypointMission(missions[3]);
+            mwaypointmission = new MWaypointMission(missions[2]);
         }
-        else if (missions[3].contains("hot")) {
+        else if (missions[2].contains("hot")) {
             missiontype = 2;  // 圆形绕飞
-            mhotpointmission = new MHotpointMission(missions[3]);
+            mhotpointmission = new MHotpointMission(missions[2]);
         }
-        mgohome = new MWaypointMission(missions[4]);
+        mgohome = new MWaypointMission(missions[3]);
     }
 }
 
@@ -63,6 +63,7 @@ class MHotpointMission{
     double alt;
     double hotr;
     float hotw;
+    float hotangle;
     String hotstart;
     MHotpointMission(String hotmission){
         String[] s = hotmission.split(",");
@@ -72,5 +73,6 @@ class MHotpointMission{
         hotr = Double.parseDouble(s[4]);
         hotw = Float.parseFloat(s[5]);
         hotstart = s[6];
+        hotangle = Float.parseFloat(s[7]);
     }
 }
